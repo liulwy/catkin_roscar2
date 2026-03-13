@@ -30,7 +30,7 @@
 
   <!-- 2️⃣ 启动ele_line_follower.py” -->
   <!--
-  <node pkg="ele-line-follower"
+  <node pkg="ele_line_follower"
         type="ele_line_follower.py"
         name="ele_line_follower"
         output="screen"/>

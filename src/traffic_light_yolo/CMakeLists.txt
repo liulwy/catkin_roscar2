@@ -1,5 +1,5 @@
-cmake_minimum_required(VERSION 3.0.2)
-project(start_roscar)
+                                                                                                                                                                                    cmake_minimum_required(VERSION 3.0.2)
+project(traffic_light_yolo)
 
 ## Compile as C++11, supported in ROS Kinetic and newer
 # add_compile_options(-std=c++11)
@@ -8,8 +8,11 @@ project(start_roscar)
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
 find_package(catkin REQUIRED COMPONENTS
-	geometry_msgs
-	rospy
+  cv_bridge
+  geometry_msgs
+  rospy
+  sensor_msgs
+  std_msgs
 )
 
 ## System dependencies are found with CMake's conventions
@@ -69,7 +72,7 @@ find_package(catkin REQUIRED COMPONENTS
 ## Generate added messages and services with any dependencies listed here
 # generate_messages(
 #   DEPENDENCIES
-#   std_msgs  # Or other packages containing msgs
+#   geometry_msgs#   sensor_msgs#   std_msgs
 # )
 
 ################################################
@@ -103,8 +106,8 @@ find_package(catkin REQUIRED COMPONENTS
 ## DEPENDS: system dependencies of this project that dependent projects also need
 catkin_package(
 #  INCLUDE_DIRS include
-#  LIBRARIES start_roscar
-#  CATKIN_DEPENDS other_catkin_pkg
+#  LIBRARIES traffic_light_yolo
+#  CATKIN_DEPENDS cv_bridge geometry_msgs rospy sensor_msgs std_msgs
 #  DEPENDS system_lib
 )
 
@@ -116,12 +119,12 @@ catkin_package(
 ## Your package locations should be listed before other locations
 include_directories(
 # include
-# ${catkin_INCLUDE_DIRS}
+  ${catkin_INCLUDE_DIRS}
 )
 
 ## Declare a C++ library
 # add_library(${PROJECT_NAME}
-#   src/${PROJECT_NAME}/start_roscar.cpp
+#   src/${PROJECT_NAME}/traffic_light_yolo.cpp
 # )
 
 ## Add cmake target dependencies of the library
@@ -132,7 +135,7 @@ include_directories(
 ## Declare a C++ executable
 ## With catkin_make all packages are built within a single CMake context
 ## The recommended prefix ensures that target names across packages don't collide
-# add_executable(${PROJECT_NAME}_node src/start_roscar_node.cpp)
+# add_executable(${PROJECT_NAME}_node src/traffic_light_yolo_node.cpp)
 
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
@@ -159,8 +162,8 @@ include_directories(
 ## Mark executable scripts (Python etc.) for installation
 ## in contrast to setup.py, you can choose the destination
 catkin_install_python(PROGRAMS
-	scripts/keyboard_teleop.py
-	DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
+scripts/traffic_light_yolo.py
+DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 
 ## Mark executables for installation
@@ -196,7 +199,7 @@ catkin_install_python(PROGRAMS
 #############
 
 ## Add gtest based cpp test target and link libraries
-# catkin_add_gtest(${PROJECT_NAME}-test test/test_start_roscar.cpp)
+# catkin_add_gtest(${PROJECT_NAME}-test test/test_traffic_light_yolo.cpp)
 # if(TARGET ${PROJECT_NAME}-test)
 #   target_link_libraries(${PROJECT_NAME}-test ${PROJECT_NAME})
 # endif()

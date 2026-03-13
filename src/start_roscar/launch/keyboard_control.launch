@@ -1,0 +1,15 @@
+<launch>
+  <!-- 底盘驱动 -->
+  <include file="$(find driver)/launch/car_driver.launch" />
+
+  <!-- 键盘控制 -->
+  <node pkg="start_roscar"
+        type="keyboard_teleop.py"
+        name="keyboard_teleop"
+      output="screen">
+    <param name="linear" value="0.20" />
+    <param name="angular" value="0.80" />
+    <param name="linear_step" value="0.02" />
+    <param name="angular_step" value="0.05" />
+  </node>
+</launch>
