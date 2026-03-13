@@ -1,4 +1,4 @@
-prefix=/home/gdut/catkin_roscar/install
+prefix=/home/gdut/catkin_roscar2/install
 
 Name: rplidar_ros
 Description: Description of rplidar_ros

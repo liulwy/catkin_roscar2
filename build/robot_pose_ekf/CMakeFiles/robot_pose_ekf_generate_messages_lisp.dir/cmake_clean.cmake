@@ -1,5 +1,5 @@
 file(REMOVE_RECURSE
-  "/home/gdut/catkin_roscar/devel/share/common-lisp/ros/robot_pose_ekf/srv/GetStatus.lisp"
+  "/home/gdut/catkin_roscar2/devel/share/common-lisp/ros/robot_pose_ekf/srv/GetStatus.lisp"
   "CMakeFiles/robot_pose_ekf_generate_messages_lisp"
 )
 

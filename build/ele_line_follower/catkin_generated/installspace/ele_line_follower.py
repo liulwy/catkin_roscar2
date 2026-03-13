@@ -88,7 +88,7 @@ class EleLineFollower:
 
     # ================== 保存地图 ==================
     def save_map(self):
-        map_dir = "/home/gdut/catkin_roscar/src/start_roscar/map"
+        map_dir = "/home/gdut/catkin_roscar/src/start_roscar2/map"
         map_name = "roscar_map"
         map_path = os.path.join(map_dir, map_name)
         # 确保目录存在

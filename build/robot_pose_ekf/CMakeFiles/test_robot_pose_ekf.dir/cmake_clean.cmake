@@ -1,6 +1,6 @@
 file(REMOVE_RECURSE
-  "/home/gdut/catkin_roscar/devel/lib/robot_pose_ekf/test_robot_pose_ekf"
-  "/home/gdut/catkin_roscar/devel/lib/robot_pose_ekf/test_robot_pose_ekf.pdb"
+  "/home/gdut/catkin_roscar2/devel/lib/robot_pose_ekf/test_robot_pose_ekf"
+  "/home/gdut/catkin_roscar2/devel/lib/robot_pose_ekf/test_robot_pose_ekf.pdb"
   "CMakeFiles/test_robot_pose_ekf.dir/test/test_robot_pose_ekf.cpp.o"
 )
 

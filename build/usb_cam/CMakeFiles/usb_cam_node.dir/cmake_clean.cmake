@@ -1,6 +1,6 @@
 file(REMOVE_RECURSE
-  "/home/gdut/catkin_roscar/devel/lib/usb_cam/usb_cam_node"
-  "/home/gdut/catkin_roscar/devel/lib/usb_cam/usb_cam_node.pdb"
+  "/home/gdut/catkin_roscar2/devel/lib/usb_cam/usb_cam_node"
+  "/home/gdut/catkin_roscar2/devel/lib/usb_cam/usb_cam_node.pdb"
   "CMakeFiles/usb_cam_node.dir/nodes/usb_cam_node.cpp.o"
 )
 

@@ -7,5 +7,10 @@
 # new environment variables
 
 # modified environment variables
-export PATH='/opt/ros/noetic/bin:/home/gdut/.local/bin:/home/gdut/.local/bin:/usr/local/cuda-11.4/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin'
-export PWD='/home/gdut/catkin_roscar/build'
+export CMAKE_PREFIX_PATH="/home/gdut/catkin_roscar2/devel:$CMAKE_PREFIX_PATH"
+export LD_LIBRARY_PATH="/home/gdut/catkin_roscar2/devel/lib:$LD_LIBRARY_PATH"
+export PKG_CONFIG_PATH="/home/gdut/catkin_roscar2/devel/lib/pkgconfig:$PKG_CONFIG_PATH"
+export PWD='/home/gdut/catkin_roscar2/build'
+export PYTHONPATH="/home/gdut/catkin_roscar2/devel/lib/python3/dist-packages:$PYTHONPATH"
+export ROSLISP_PACKAGE_DIRECTORIES="/home/gdut/catkin_roscar2/devel/share/common-lisp:$ROSLISP_PACKAGE_DIRECTORIES"
+export ROS_PACKAGE_PATH="/home/gdut/catkin_roscar2/src:$ROS_PACKAGE_PATH"

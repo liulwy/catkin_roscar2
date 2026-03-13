@@ -1,4 +1,4 @@
-prefix=/home/gdut/catkin_roscar/install
+prefix=/home/gdut/catkin_roscar2/install
 
 Name: robot_pose_ekf
 Description: Description of robot_pose_ekf

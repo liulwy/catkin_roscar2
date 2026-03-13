@@ -1,5 +1,5 @@
 file(REMOVE_RECURSE
-  "/home/gdut/catkin_roscar/devel/include/robot_pose_ekf/GetStatus.h"
+  "/home/gdut/catkin_roscar2/devel/include/robot_pose_ekf/GetStatus.h"
   "CMakeFiles/robot_pose_ekf_generate_messages_cpp"
 )
 

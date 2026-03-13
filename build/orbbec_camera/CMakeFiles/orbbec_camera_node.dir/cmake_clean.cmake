@@ -1,6 +1,6 @@
 file(REMOVE_RECURSE
-  "/home/gdut/catkin_roscar/devel/lib/orbbec_camera/orbbec_camera_node"
-  "/home/gdut/catkin_roscar/devel/lib/orbbec_camera/orbbec_camera_node.pdb"
+  "/home/gdut/catkin_roscar2/devel/lib/orbbec_camera/orbbec_camera_node"
+  "/home/gdut/catkin_roscar2/devel/lib/orbbec_camera/orbbec_camera_node.pdb"
   "CMakeFiles/orbbec_camera_node.dir/src/main.cpp.o"
 )
 

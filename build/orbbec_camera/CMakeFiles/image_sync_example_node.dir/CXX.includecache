@@ -6,7 +6,7 @@
 
 #IncludeRegexTransform: 
 
-/home/gdut/catkin_roscar/src/orbbec_camera/examples/multi_camera_time_sync/image_sync_example_node.cpp
+/home/gdut/catkin_roscar2/src/orbbec_camera/examples/multi_camera_time_sync/image_sync_example_node.cpp
 ros/ros.h
 -
 sensor_msgs/Image.h
