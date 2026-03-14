@@ -1,0 +1,8 @@
+multi_waypoint_nav:
+  waypoints:
+    - {x: 0.5, y: 0.0, yaw: 0.0}
+    - {x: 0.5, y: 0.5, yaw: 1.57}
+    - {x: 0.0, y: 0.5, yaw: 3.14}
+  arrival_tolerance: 0.3
+  wait_after_arrival: 1.0
+  max_retries: 2
