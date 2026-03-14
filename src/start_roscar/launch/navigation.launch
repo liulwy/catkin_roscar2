@@ -38,6 +38,6 @@
 
  <node pkg="start_roscar" type="multi_waypoint_nav.py" name="multi_waypoint_nav" output="screen" clear_params="true">
     <rosparam command="load" file="$(find start_roscar)/param/multi_waypoint_nav_params.yaml"/>
-  </node>
+</node>
 
 </launch>
