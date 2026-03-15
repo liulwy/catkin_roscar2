@@ -2,4 +2,4 @@
 source_root_dir = '/home/gdut/catkin_roscar2/src'
 whitelisted_packages = ''.split(';') if '' != '' else []
 blacklisted_packages = ''.split(';') if '' != '' else []
-underlay_workspaces = '/home/gdut/catkin_roscar/devel;/opt/ros/noetic'.split(';') if '/home/gdut/catkin_roscar/devel;/opt/ros/noetic' != '' else []
+underlay_workspaces = '/home/gdut/catkin_roscar2/devel;/home/gdut/catkin_roscar/devel;/opt/ros/noetic'.split(';') if '/home/gdut/catkin_roscar2/devel;/home/gdut/catkin_roscar/devel;/opt/ros/noetic' != '' else []

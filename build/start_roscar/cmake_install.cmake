@@ -56,3 +56,7 @@ if("x${CMAKE_INSTALL_COMPONENT}x" STREQUAL "xUnspecifiedx" OR NOT CMAKE_INSTALL_
   file(INSTALL DESTINATION "${CMAKE_INSTALL_PREFIX}/lib/start_roscar" TYPE PROGRAM FILES "/home/gdut/catkin_roscar2/build/start_roscar/catkin_generated/installspace/keyboard_teleop.py")
 endif()
 
+if("x${CMAKE_INSTALL_COMPONENT}x" STREQUAL "xUnspecifiedx" OR NOT CMAKE_INSTALL_COMPONENT)
+  file(INSTALL DESTINATION "${CMAKE_INSTALL_PREFIX}/lib/start_roscar" TYPE PROGRAM FILES "/home/gdut/catkin_roscar2/build/start_roscar/catkin_generated/installspace/multi_waypoint_nav.py")
+endif()
+

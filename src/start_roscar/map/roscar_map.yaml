@@ -1,4 +1,4 @@
-image: /home/gdut/catkin_roscar/src/start_roscar/map/roscar_map.pgm
+image: /home/gdut/catkin_roscar2/src/start_roscar/map/roscar_map.pgm
 resolution: 0.050000
 origin: [-100.000000, -100.000000, 0.000000]
 negate: 0
