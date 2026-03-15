@@ -25,6 +25,7 @@ class TrafficLightDetector:
 
         #补充话题通信发布方
         self.cmd_pub = rospy.Publisher("/traffic_light_status", String, queue_size=10)
+        self.image_pub = rospy.Publisher("/traffic_light_yolo/image_annotated", Image, queue_size=1)
         self.msg = String()
         self.msg.data = "none"
 
@@ -95,9 +96,21 @@ class TrafficLightDetector:
         # 判断红绿灯
         result_label, center_xy = self.detect_light(results)
 
-        #补充话题发布
-        self.msg.data = result_label
+        # 把颜色和坐标拼接成字符串，例如 "red,100,200"
+        if center_xy is not None:
+            formatted_msg = f"{result_label},{center_xy[0]},{center_xy[1]}"
+        else:
+            formatted_msg = f"{result_label},-1,-1"
+
+        # 发布拼接后的话题
+        self.msg.data = formatted_msg
         self.cmd_pub.publish(self.msg)
+
+        # 发布 YOLO 识别可视化图像（带检测框）
+        annotated_frame = results[0].plot()
+        image_msg = self.bridge.cv2_to_imgmsg(annotated_frame, encoding="bgr8")
+        image_msg.header = msg.header
+        self.image_pub.publish(image_msg)
 
         # 写入txt
         self.file.write(result_label + "\n")
@@ -107,11 +120,10 @@ class TrafficLightDetector:
         elapsed = time.time() - self.start_time
         fps = self.frame_count / elapsed
 
-        if center_xy is None:
-            rospy.loginfo("Result: %s   XY: (none)   FPS: %.2f", result_label, fps)
-        else:
-            rospy.loginfo("Result: %s   XY: (%d, %d)   FPS: %.2f", result_label, center_xy[0], center_xy[1], fps)
+        rospy.loginfo("Result: %s   FPS: %.2f", result_label, fps)
 
+
+        
     def shutdown(self):
 
         elapsed = time.time() - self.start_time

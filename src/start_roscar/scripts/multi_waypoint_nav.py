@@ -7,6 +7,7 @@ import uuid  # 生成唯一目标ID
 import threading
 import sys
 from actionlib_msgs.msg import GoalStatus, GoalID  # action 状态、目标ID
+from std_msgs.msg import String
 
 from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal, MoveBaseActionGoal  # move_base 动作消息
 from geometry_msgs.msg import Pose, PoseStamped, Quaternion  # 位置与姿态消息类型
@@ -72,21 +73,79 @@ class MultiWaypointNavigator(object):
         rospy.loginfo('[%s] 当前 waypoint 队列长度 %d', self.ns, len(self.waypoint_queue))
         rospy.loginfo('[%s] 已接收 %d 个导航点，小车开始启动。', self.ns, len(self.waypoint_queue))
 
+        # 初始化红绿灯相关状态
+        self.current_light_color = "none"
+        self.light_distance = float('inf')
+        self.is_waiting_for_light = False
+        self.traffic_light_sub = None
+
         if self.require_enter_to_start:
             self._start_enter_listener()
         else:
             self.start_event.set()
+            self._subscribe_traffic_light()
+
+    def _subscribe_traffic_light(self):
+        """在导航开始后订阅红绿灯结果，避免过早触发停车逻辑。"""
+        if self.traffic_light_sub is None:
+            self.traffic_light_sub = rospy.Subscriber("/traffic_light_status", String, self.traffic_light_callback)
+            rospy.loginfo('[%s] 已订阅 /traffic_light_status', self.ns)
 
     def _start_enter_listener(self):
         """启动后台线程，等待用户按下 Enter 后开始导航。"""
         listener = threading.Thread(target=self._wait_for_enter_to_start, daemon=True)
         listener.start()
 
+    def calculate_distance(self, u, v):
+        """
+        根据像素坐标 (u(x), v(y)) 计算红绿灯现实距离。
+        这是一个粗略的单目测距占位算法。你需要根据你的相机标定参数及高度进行替换。
+        假设: 目标在画面越靠下方(v值越大)，距离越近。
+        """
+        # TODO: 替换为实际的(如 Pinhole Camera 模型)测距算式
+        # 例如: Z = (f_y * H) / (v - c_y)
+        camera_height = 480  # 假设画面高480
+        if v <= 0: return float('inf')
+        
+        # 简单线性估算示例(仅做演示，极不准确): 
+        # 假设到底部(480)距离为0， 每少一像素距离增加0.01米
+        distance = (camera_height - v) * 0.01 
+        return max(0.0, distance)
+    
+    def traffic_light_callback(self, msg):
+        """处理红绿灯识别结果，判断距离并控制小车启停。"""
+        parts = msg.data.split(',')
+        if len(parts) == 3:
+            self.current_light_color = parts[0]
+            cx = float(parts[1])
+            cy = float(parts[2])
+            rospy.loginfo("[%s] %s灯(%.2f,%.2f) 距离%.2fm", self.ns, self.current_light_color, cx, cy, self.light_distance)
+            if cx >= 0 and cy >= 0:
+                self.light_distance = self.calculate_distance(cx, cy)
+                #rospy.loginfo("[%s] 距离红灯 %.2fm", self.ns, self.light_distance)
+                
+            else:
+                self.light_distance = float('inf')
+        else:
+            self.current_light_color = "none"
+            self.light_distance = float('inf')
+
+        # === 核心逻辑：小于1m 且为 红灯 ===
+        if self.current_light_color == "red" and self.light_distance < 1.0:
+            if not self.is_waiting_for_light:
+                rospy.logwarn("[%s] 距离红灯 %.2fm，触发停车!", self.ns, self.light_distance)
+                self.is_waiting_for_light = True
+                self.client.cancel_all_goals()  # 取消目标，让底盘立刻停止
+        else:
+            # 变为绿灯或者移除了红灯视野时，允许继续通行
+            self.is_waiting_for_light = False
+
     def _wait_for_enter_to_start(self):
         """等待终端 Enter 输入；若 stdin 不可用则自动开始。"""
         if not sys.stdin or not sys.stdin.isatty():
             rospy.logwarn('[%s] stdin 不可用，自动开始导航。', self.ns)
             self.start_event.set()
+            self._subscribe_traffic_light()
             return
 
         rospy.loginfo('[%s] 请先在 RViz 打点，完成后在本终端按 Enter 开始导航。', self.ns)
@@ -94,9 +153,11 @@ class MultiWaypointNavigator(object):
             input()
             rospy.loginfo('[%s] 已收到 Enter，开始按队列执行导航。当前队列=%d', self.ns, len(self.waypoint_queue))
             self.start_event.set()
+            self._subscribe_traffic_light()
         except EOFError:
             rospy.logwarn('[%s] 读取 Enter 失败(EOF)，自动开始导航。', self.ns)
             self.start_event.set()
+            self._subscribe_traffic_light()
 
     def _rviz_goal_callback(self, msg):
         """接收 rviz 投射点（/move_base_simple/goal），并追加到 waypoint 队列。"""
@@ -138,7 +199,7 @@ class MultiWaypointNavigator(object):
         return goal
 
     def send_goal(self, x, y, yaw):
-        """发布目标到 move_base/goal 并等待当前目标完成。"""
+        """发布目标到 move_base/goal 并等待当前目标完成。加入红绿灯阻塞逻辑。"""
         goal = self._create_goal(x, y, yaw)
 
         # 构造 MoveBaseActionGoal，包装目标和 GoalID
@@ -153,32 +214,58 @@ class MultiWaypointNavigator(object):
                       self.ns, self.current_index + 1, x, y, yaw)
         self.goal_pub.publish(action_goal)
 
-        # 每个目标允许多次重试
-        for attempt in range(1, self.max_retries + 2):
+        # 把原本的 for 循环改为 while 循环，方便遇到红灯时重试次数不累加
+        attempt = 1
+        while attempt <= self.max_retries + 1:
             if rospy.is_shutdown():
                 return False
+
+            # 1. 发送目标前：如果是红灯，阻塞等待绿灯（或者红灯移出视野）
+            while self.is_waiting_for_light and not rospy.is_shutdown():
+                rospy.loginfo_throttle(2.0, '[%s] 前方红灯，等待绿灯后再出发...', self.ns)
+                rospy.sleep(0.5)
 
             rospy.loginfo('[%s] 等待 move_base 完成目标 #%s (attempt %d)...',
                           self.ns, self.current_index + 1, attempt)
 
-            # 这里使用 move_base action client 监测目标状态完成情况
             self.client.send_goal(goal)
-            finished = self.client.wait_for_result(rospy.Duration(120.0))
+            
+            # 2. 移动中阻塞等待：将一次性的120秒阻塞改为0.2秒一轮的循环，以便及时响应红灯
+            finished = False
+            timeout_time = rospy.Time.now() + rospy.Duration(120.0)
+            
+            while not rospy.is_shutdown() and rospy.Time.now() < timeout_time:
+                # 每次只阻塞 0.2 秒验证成果
+                if self.client.wait_for_result(rospy.Duration(0.2)):
+                    finished = True
+                    break
+                
+                # 如果等待过程中触发了红灯回调 (回调中已执行 cancel_all_goals，小车正在刹车)
+                if self.is_waiting_for_light:
+                    rospy.loginfo_throttle(2.0, '[%s] 移动中遇到红灯，停车！', self.ns)
+                    break
+            
             state = self.client.get_state()
 
+            # 3. 处理红灯被打断的情况
+            if self.is_waiting_for_light:
+                # 不计入 attempt 失败，直接 continue 进入下一次循环死等绿灯重发
+                rospy.loginfo('[%s] 目标 #%s 因为红灯暂停，等待绿灯后自动重新尝试。', self.ns, self.current_index + 1)
+                continue
+
+            # 4. 正常返回和异常重试判断
             if not finished:
-                # 超时：认为当前目标未完成，取消并尝试重发
                 rospy.logwarn('[%s] 目标 #%s 超时，取消并重试...', self.ns, self.current_index + 1)
                 self.client.cancel_goal()
             elif state == GoalStatus.SUCCEEDED:
-                # 成功：目标完成，返回 True 继续下一个目标
                 rospy.loginfo('[%s] 目标 #%s 已到达', self.ns, self.current_index + 1)
                 rospy.sleep(self.wait_after_arrival)  # 到达后等待，可缓冲小车动作
                 return True
             else:
-                # 失败：非成功状态，记录并根据重试次数决定是否继续
                 rospy.logwarn('[%s] 目标 #%s 未达成，状态=%d，重试 %d/%d',
                               self.ns, self.current_index + 1, state, attempt, self.max_retries + 1)
+            
+            attempt += 1
 
         rospy.logerr('[%s] 目标 #%s 最终失败，跳过', self.ns, self.current_index + 1)
         return False
