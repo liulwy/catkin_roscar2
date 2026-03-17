@@ -54,7 +54,7 @@ CMAKE_BINARY_DIR = /home/gdut/catkin_roscar2/build
 include orbbec_camera/CMakeFiles/_orbbec_camera_generate_messages_check_deps_GetDeviceInfo.dir/progress.make
 
 orbbec_camera/CMakeFiles/_orbbec_camera_generate_messages_check_deps_GetDeviceInfo:
-	cd /home/gdut/catkin_roscar2/build/orbbec_camera && ../catkin_generated/env_cached.sh /usr/bin/python3 /opt/ros/noetic/share/genmsg/cmake/../../../lib/genmsg/genmsg_check_deps.py orbbec_camera /home/gdut/catkin_roscar2/src/orbbec_camera/srv/GetDeviceInfo.srv std_msgs/Header:orbbec_camera/DeviceInfo
+	cd /home/gdut/catkin_roscar2/build/orbbec_camera && ../catkin_generated/env_cached.sh /usr/bin/python3 /opt/ros/noetic/share/genmsg/cmake/../../../lib/genmsg/genmsg_check_deps.py orbbec_camera /home/gdut/catkin_roscar2/src/orbbec_camera/srv/GetDeviceInfo.srv orbbec_camera/DeviceInfo:std_msgs/Header
 
 _orbbec_camera_generate_messages_check_deps_GetDeviceInfo: orbbec_camera/CMakeFiles/_orbbec_camera_generate_messages_check_deps_GetDeviceInfo
 _orbbec_camera_generate_messages_check_deps_GetDeviceInfo: orbbec_camera/CMakeFiles/_orbbec_camera_generate_messages_check_deps_GetDeviceInfo.dir/build.make

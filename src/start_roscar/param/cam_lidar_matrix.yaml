@@ -1,0 +1,20 @@
+# 相机内参参数，来源于 ost.txt
+camera:
+  width: 640
+  height: 480
+  camera_matrix:
+    rows: 3
+    cols: 3
+    data: [369.113425, 0.0, 312.271401, 0.0, 370.508077, 224.836459, 0.0, 0.0, 1.0]
+  distortion_coefficients:
+    rows: 1
+    cols: 5
+    data: [0.044246, -0.031578, 0.005695, 0.002087, 0.0]
+  rectification_matrix:
+    rows: 3
+    cols: 3
+    data: [1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0]
+  projection_matrix:
+    rows: 3
+    cols: 4
+    data: [376.146505, 0.0, 313.976356, 0.0, 0.0, 377.592578, 228.091777, 0.0, 0.0, 0.0, 1.0, 0.0]

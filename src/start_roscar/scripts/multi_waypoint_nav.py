@@ -96,36 +96,17 @@ class MultiWaypointNavigator(object):
         listener = threading.Thread(target=self._wait_for_enter_to_start, daemon=True)
         listener.start()
 
-    def calculate_distance(self, u, v):
-        """
-        根据像素坐标 (u(x), v(y)) 计算红绿灯现实距离。
-        这是一个粗略的单目测距占位算法。你需要根据你的相机标定参数及高度进行替换。
-        假设: 目标在画面越靠下方(v值越大)，距离越近。
-        """
-        # TODO: 替换为实际的(如 Pinhole Camera 模型)测距算式
-        # 例如: Z = (f_y * H) / (v - c_y)
-        camera_height = 480  # 假设画面高480
-        if v <= 0: return float('inf')
-        
-        # 简单线性估算示例(仅做演示，极不准确): 
-        # 假设到底部(480)距离为0， 每少一像素距离增加0.01米
-        distance = (camera_height - v) * 0.01 
-        return max(0.0, distance)
-    
     def traffic_light_callback(self, msg):
         """处理红绿灯识别结果，判断距离并控制小车启停。"""
         parts = msg.data.split(',')
-        if len(parts) == 3:
+        if len(parts) >= 2:
             self.current_light_color = parts[0]
-            cx = float(parts[1])
-            cy = float(parts[2])
-            rospy.loginfo("[%s] %s灯(%.2f,%.2f) 距离%.2fm", self.ns, self.current_light_color, cx, cy, self.light_distance)
-            if cx >= 0 and cy >= 0:
-                self.light_distance = self.calculate_distance(cx, cy)
-                #rospy.loginfo("[%s] 距离红灯 %.2fm", self.ns, self.light_distance)
-                
-            else:
+            dist = float(parts[1])
+            if dist < 0:
                 self.light_distance = float('inf')
+            else:
+                self.light_distance = dist
+            rospy.loginfo_throttle(2.0, "[%s] %s灯 距离: %.2fm", self.ns, self.current_light_color, self.light_distance)
         else:
             self.current_light_color = "none"
             self.light_distance = float('inf')
