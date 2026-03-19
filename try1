@@ -71,20 +71,28 @@ class TrafficLightDetector:
         self.lidar_angle_max = msg.angle_max
         self.lidar_ranges = list(msg.ranges)
 
-    def calculate_distance(self, u, label=””):
+        # 调试：打印雷达基本参数（只打印一次）
+        if not hasattr(self, '_lidar_debug_printed'):
+            self._lidar_debug_printed = True
+            total = len(self.lidar_ranges)
+            idx_front = int(round((0.0 - msg.angle_min) / msg.angle_increment)) % total
+            rospy.logwarn("=== 雷达参数 ===")
+            rospy.logwarn("angle_min=%.4f rad (%.1f°)", msg.angle_min, np.degrees(msg.angle_min))
+            rospy.logwarn("angle_max=%.4f rad (%.1f°)", msg.angle_max, np.degrees(msg.angle_max))
+            rospy.logwarn("angle_increment=%.6f rad (%.4f°)", msg.angle_increment, np.degrees(msg.angle_increment))
+            rospy.logwarn("总点数: %d, 正前方索引: %d", total, idx_front)
+            rospy.logwarn("正前方附近距离(idx %d±3): %s", idx_front,
+                [round(self.lidar_ranges[(idx_front+i) % total], 3) for i in range(-3, 4)])
+
+    def calculate_distance(self, u, label=""):
         if not self.lidar_ranges or self.lidar_angle_increment == 0:
             return float('inf')
 
         # 1. 计算像素点对应的雷达水平视场角
-        # 相机坐标系：u向右递增；雷达坐标系：逆时针递增（正前方0°，左侧正角度）
-        # u < cx 时物体在左侧，对应正角度；u > cx 时物体在右侧，对应负角度
         theta_rad = np.arctan2(self.camera_cx - u, self.camera_fx)  # 弧度，范围 -π/2 到 π/2
 
         # 2. 将角度映射到雷达的角度范围
-        # 雷达通常是 -π 到 π，需要找到对应的索引
-        # 计算角度差，处理角度环绕
         angle_diff = theta_rad - self.lidar_angle_min
-        # 如果角度差超出范围，进行环绕处理
         if angle_diff > np.pi:
             angle_diff -= 2 * np.pi
         elif angle_diff < -np.pi:
@@ -93,14 +101,14 @@ class TrafficLightDetector:
         idx_center = int(round(angle_diff / self.lidar_angle_increment))
         idx_center = idx_center % len(self.lidar_ranges)
 
-        # 3. 查找 +-5° 的雷达数据
-        angle_range = np.radians(5)
+        # 3. 查找 +-2° 的雷达数据
+        angle_range = np.radians(2)
         idx_offset = int(round(angle_range / self.lidar_angle_increment))
 
         valid_distances = []
         raw_data = []
 
-        # 完整提取 +-5° 内的所有原始数据用于打印
+        # 完整提取 +-2° 内的所有原始数据用于打印
         for i in range(-idx_offset, idx_offset + 1):
             idx = (idx_center + i) % len(self.lidar_ranges)
             d = self.lidar_ranges[idx]
@@ -108,14 +116,24 @@ class TrafficLightDetector:
             if not np.isinf(d) and not np.isnan(d) and d > 0.05:
                 valid_distances.append(d)
 
-        # 取有效距离的中位数（更稳健，避免单个噪点影响）
+        # 取有效距离的最小值（更适合红绿灯距离判定）
         if valid_distances:
-            distance = np.median(valid_distances)
+            distance = np.min(valid_distances)
         else:
             distance = float('inf')
 
-        rospy.loginfo(“检测到 %s 灯, 目标像素: u=%d, 计算角度: %.2f°, 雷达距离: %.3fm”, label, u, np.degrees(theta_rad), distance)
-        rospy.loginfo(“目标角度+-5°内原始雷达数据(米): %s”, raw_data)
+        rospy.loginfo("检测到 %s 灯, 目标像素: u=%d, 计算角度: %.2f°, 雷达距离(最小): %.3fm", label, u, np.degrees(theta_rad), distance)
+        rospy.loginfo("目标角度+-2°内原始雷达数据(米): %s", raw_data)
+
+        # 调试：打印角度映射中间值
+        total = len(self.lidar_ranges)
+        idx_front = int(round((0.0 - self.lidar_angle_min) / self.lidar_angle_increment)) % total
+        rospy.logwarn("=== 角度映射调试 ===")
+        rospy.logwarn("camera_cx=%.1f, camera_fx=%.1f, u=%d", self.camera_cx, self.camera_fx, u)
+        rospy.logwarn("theta_rad=%.4f (%.2f°), angle_diff=%.4f (%.2f°)", theta_rad, np.degrees(theta_rad), angle_diff, np.degrees(angle_diff))
+        rospy.logwarn("idx_center=%d, idx_front=%d, 差值=%d", idx_center, idx_front, idx_center - idx_front)
+        rospy.logwarn("正前方(idx=%d)距离: %.3fm, 目标(idx=%d)距离: %.3fm", idx_front, self.lidar_ranges[idx_front], idx_center, self.lidar_ranges[idx_center % total])
+
         return distance
 
     def detect_light(self, results):
