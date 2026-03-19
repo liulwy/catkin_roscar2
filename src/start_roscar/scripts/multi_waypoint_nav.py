@@ -32,7 +32,7 @@ class MultiWaypointNavigator(object):
         # 读取参数：waypoints 里是一组点列表，每个点含 x,y,yaw
         self.waypoints = rospy.get_param('~waypoints', [])
         self.arrival_tolerance = rospy.get_param('~arrival_tolerance', 0.3)
-        self.wait_after_arrival = rospy.get_param('~wait_after_arrival', 1.0)
+        self.wait_after_arrival = rospy.get_param('~wait_after_arrival', 0.2)
         self.max_retries = rospy.get_param('~max_retries', 2)
         self.require_enter_to_start = rospy.get_param('~require_enter_to_start', True)
         self.min_waypoints_to_start = rospy.get_param('~min_waypoints_to_start', 1)
@@ -117,8 +117,10 @@ class MultiWaypointNavigator(object):
                 rospy.logwarn("[%s] 距离红灯 %.2fm，触发停车!", self.ns, self.light_distance)
                 self.is_waiting_for_light = True
                 self.client.cancel_all_goals()  # 取消目标，让底盘立刻停止
-        else:
-            # 变为绿灯或者移除了红灯视野时，允许继续通行
+        elif self.current_light_color == "green":
+            # 只有明确检测到绿灯才恢复行驶，none时保持原状态不变
+            if self.is_waiting_for_light:
+                rospy.loginfo("[%s] 检测到绿灯，恢复行驶", self.ns)
             self.is_waiting_for_light = False
 
     def _wait_for_enter_to_start(self):
