@@ -100,19 +100,18 @@ class TrafficLightDetector:
         self.lidar_angle_max = msg.angle_max
         self.lidar_ranges = list(msg.ranges)
 
-        # [修改] 将雷达360°数据(角度, 距离)写入文件
-        # 计算每个点对应的角度（度）
-        if hasattr(self, 'lidar_file'):
-            data_with_angles = []
-            for i, distance in enumerate(self.lidar_ranges):
-                # 计算当前索引对应的弧度
-                angle_rad = self.lidar_angle_min + i * self.lidar_angle_increment
-                # 转换为角度
-                angle_deg = np.degrees(angle_rad)
-                # 保留3位小数
-                data_with_angles.append((round(angle_deg, 2), round(distance, 3)))
-            
-            self.lidar_file.write(str(data_with_angles) + "\n")
+        # [!!! 关键修改 !!!] 注释掉下面这块写文件的代码，它是延迟的罪魁祸首
+        # if hasattr(self, 'lidar_file'):
+        #     data_with_angles = []
+        #     for i, distance in enumerate(self.lidar_ranges):
+        #         # 计算当前索引对应的弧度
+        #         angle_rad = self.lidar_angle_min + i * self.lidar_angle_increment
+        #         # 转换为角度
+        #         angle_deg = np.degrees(angle_rad)
+        #         # 保留3位小数
+        #         data_with_angles.append((round(angle_deg, 2), round(distance, 3)))
+        #     
+        #     self.lidar_file.write(str(data_with_angles) + "\n")
 
         # 调试：打印雷达基本参数（只打印一次）
         if not hasattr(self, '_lidar_debug_printed'):
@@ -244,7 +243,7 @@ class TrafficLightDetector:
             self.image_pub.publish(image_msg)
 
         # 写入txt
-        self.file.write(result_label + "\n")
+        # self.file.write(result_label + "\n")
 
         # 统计FPS
         self.frame_count += 1

@@ -10,7 +10,7 @@ from actionlib_msgs.msg import GoalStatus, GoalID  # action 状态、目标ID
 from std_msgs.msg import String
 
 from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal, MoveBaseActionGoal  # move_base 动作消息
-from geometry_msgs.msg import Pose, PoseStamped, Quaternion  # 位置与姿态消息类型
+from geometry_msgs.msg import Pose, PoseStamped, Quaternion, Twist  # 位置与姿态消息类型
 from tf.transformations import quaternion_from_euler, euler_from_quaternion  # 欧拉角<->四元数转换
 
 
@@ -39,6 +39,9 @@ class MultiWaypointNavigator(object):
 
         # 直接发布 move_base/goal 话题，确保逐个目标发送逻辑
         self.goal_pub = rospy.Publisher('/move_base/goal', MoveBaseActionGoal, queue_size=1)
+
+        # [新增] 创建速度发布者，用于强制急停
+        self.cmd_vel_pub = rospy.Publisher('/cmd_vel', Twist, queue_size=1)
 
         # 限制最大 waypoint 个数，避免过多点击导致不必要的队列积压
         self.max_waypoints = rospy.get_param('~max_waypoints', 20)
@@ -88,7 +91,8 @@ class MultiWaypointNavigator(object):
     def _subscribe_traffic_light(self):
         """在导航开始后订阅红绿灯结果，避免过早触发停车逻辑。"""
         if self.traffic_light_sub is None:
-            self.traffic_light_sub = rospy.Subscriber("/traffic_light_status", String, self.traffic_light_callback)
+            # [修改] queue_size=1 确保只处理最新消息，不处理积压的旧消息
+            self.traffic_light_sub = rospy.Subscriber("/traffic_light_status", String, self.traffic_light_callback, queue_size=1)
             rospy.loginfo('[%s] 已订阅 /traffic_light_status', self.ns)
 
     def _start_enter_listener(self):
@@ -116,9 +120,20 @@ class MultiWaypointNavigator(object):
             if not self.is_waiting_for_light:
                 rospy.logwarn("[%s] 距离红灯 %.2fm，触发停车!", self.ns, self.light_distance)
                 self.is_waiting_for_light = True
-                self.client.cancel_all_goals()  # 取消目标，让底盘立刻停止
+                
+                # 1. 取消规划路径
+                self.client.cancel_all_goals()
+                
+                # 2. [新增] 强制发布 0 速度，覆盖 move_base 的减速过程，实现急停
+                stop_twist = Twist()
+                stop_twist.linear.x = 0.0
+                stop_twist.angular.z = 0.0
+                # 连续发送几次确保接收
+                for _ in range(3):
+                    self.cmd_vel_pub.publish(stop_twist)
+                    rospy.sleep(0.02)
+                    
         elif self.current_light_color == "green":
-            # 只有明确检测到绿灯才恢复行驶，none时保持原状态不变
             if self.is_waiting_for_light:
                 rospy.loginfo("[%s] 检测到绿灯，恢复行驶", self.ns)
             self.is_waiting_for_light = False

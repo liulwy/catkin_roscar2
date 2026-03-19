@@ -54,7 +54,7 @@ CMAKE_BINARY_DIR = /home/gdut/catkin_roscar2/build
 include orbbec_camera/CMakeFiles/_orbbec_camera_generate_messages_check_deps_GetCameraInfo.dir/progress.make
 
 orbbec_camera/CMakeFiles/_orbbec_camera_generate_messages_check_deps_GetCameraInfo:
-	cd /home/gdut/catkin_roscar2/build/orbbec_camera && ../catkin_generated/env_cached.sh /usr/bin/python3 /opt/ros/noetic/share/genmsg/cmake/../../../lib/genmsg/genmsg_check_deps.py orbbec_camera /home/gdut/catkin_roscar2/src/orbbec_camera/srv/GetCameraInfo.srv sensor_msgs/CameraInfo:std_msgs/Header:sensor_msgs/RegionOfInterest
+	cd /home/gdut/catkin_roscar2/build/orbbec_camera && ../catkin_generated/env_cached.sh /usr/bin/python3 /opt/ros/noetic/share/genmsg/cmake/../../../lib/genmsg/genmsg_check_deps.py orbbec_camera /home/gdut/catkin_roscar2/src/orbbec_camera/srv/GetCameraInfo.srv sensor_msgs/RegionOfInterest:std_msgs/Header:sensor_msgs/CameraInfo
 
 _orbbec_camera_generate_messages_check_deps_GetCameraInfo: orbbec_camera/CMakeFiles/_orbbec_camera_generate_messages_check_deps_GetCameraInfo
 _orbbec_camera_generate_messages_check_deps_GetCameraInfo: orbbec_camera/CMakeFiles/_orbbec_camera_generate_messages_check_deps_GetCameraInfo.dir/build.make
