@@ -34,7 +34,8 @@ class MultiWaypointNavigator(object):
         self.arrival_tolerance = rospy.get_param('~arrival_tolerance', 0.3)
         self.wait_after_arrival = rospy.get_param('~wait_after_arrival', 0.2)
         self.max_retries = rospy.get_param('~max_retries', 2)
-        self.require_enter_to_start = rospy.get_param('~require_enter_to_start', True)
+        # 修改: 默认为False，上电自动开始
+        self.require_enter_to_start = rospy.get_param('~require_enter_to_start', False)
         self.min_waypoints_to_start = rospy.get_param('~min_waypoints_to_start', 1)
 
         # 直接发布 move_base/goal 话题，确保逐个目标发送逻辑
@@ -45,9 +46,38 @@ class MultiWaypointNavigator(object):
 
         # 限制最大 waypoint 个数，避免过多点击导致不必要的队列积压
         self.max_waypoints = rospy.get_param('~max_waypoints', 20)
-        self.use_rviz_waypoints = rospy.get_param('~use_rviz_waypoints', True)
+        self.use_rviz_waypoints = rospy.get_param('~use_rviz_waypoints', False) # 修改: 默认不依懒Rviz
         self.waypoint_queue = []
 
+        # ==========================================
+        # 硬编码 7 个目标点 (用户自定义)
+        # ==========================================
+        # 格式: {'x': float, 'y': float, 'yaw': float}
+        # yaw 是弧度制角度
+        
+        # 点位 1 (用户提供: Pos(0.063, 0.015), Angle: 3.138)
+        self.waypoint_queue.append({'x': 3.778, 'y': 0.203, 'yaw': -0.030})
+        
+        # 点位 2 (请在此处修改坐标)
+        self.waypoint_queue.append({'x': 4.782, 'y': -0.872, 'yaw': -1.566}) 
+        
+        # 点位 3 (请在此处修改坐标)
+        self.waypoint_queue.append({'x': 4.760, 'y': -1.599, 'yaw': -1.574})
+        
+        # 点位 4 (请在此处修改坐标) 
+        self.waypoint_queue.append({'x': 2.174, 'y': -1.838, 'yaw': 3.121})
+        
+        # 点位 5 (请在此处修改坐标)
+        self.waypoint_queue.append({'x': 2.849, 'y': -0.990, 'yaw': 2.363})
+        
+        # 点位 6 (请在此处修改坐标)
+        self.waypoint_queue.append({'x': 1.757, 'y': 0.046, 'yaw': -3.130})
+        
+        # 点位 7 (请在此处修改坐标)
+        self.waypoint_queue.append({'x': 0.063, 'y': 0.015, 'yaw': 3.138})
+
+        rospy.loginfo('[%s] 已加载预设的 %d 个目标点', self.ns, len(self.waypoint_queue))
+        
         self.current_index = 0
         self.start_event = threading.Event()
 
@@ -110,7 +140,7 @@ class MultiWaypointNavigator(object):
                 self.light_distance = float('inf')
             else:
                 self.light_distance = dist
-            rospy.loginfo_throttle(2.0, "[%s] %s灯 距离: %.2fm", self.ns, self.current_light_color, self.light_distance)
+            rospy.loginfo_throttle(1.0, "[%s] %s灯 距离: %.2fm", self.ns, self.current_light_color, self.light_distance)
         else:
             self.current_light_color = "none"
             self.light_distance = float('inf')
