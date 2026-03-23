@@ -122,8 +122,8 @@ orbbec_camera/CMakeFiles/orbbec_camera_generate_messages_cpp: /home/gdut/catkin_
 
 /home/gdut/catkin_roscar2/devel/include/orbbec_camera/GetCameraInfo.h: /opt/ros/noetic/lib/gencpp/gen_cpp.py
 /home/gdut/catkin_roscar2/devel/include/orbbec_camera/GetCameraInfo.h: /home/gdut/catkin_roscar2/src/orbbec_camera/srv/GetCameraInfo.srv
-/home/gdut/catkin_roscar2/devel/include/orbbec_camera/GetCameraInfo.h: /opt/ros/noetic/share/sensor_msgs/msg/RegionOfInterest.msg
 /home/gdut/catkin_roscar2/devel/include/orbbec_camera/GetCameraInfo.h: /opt/ros/noetic/share/std_msgs/msg/Header.msg
+/home/gdut/catkin_roscar2/devel/include/orbbec_camera/GetCameraInfo.h: /opt/ros/noetic/share/sensor_msgs/msg/RegionOfInterest.msg
 /home/gdut/catkin_roscar2/devel/include/orbbec_camera/GetCameraInfo.h: /opt/ros/noetic/share/sensor_msgs/msg/CameraInfo.msg
 /home/gdut/catkin_roscar2/devel/include/orbbec_camera/GetCameraInfo.h: /opt/ros/noetic/share/gencpp/msg.h.template
 /home/gdut/catkin_roscar2/devel/include/orbbec_camera/GetCameraInfo.h: /opt/ros/noetic/share/gencpp/srv.h.template

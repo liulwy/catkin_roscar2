@@ -8,14 +8,18 @@
 
     <node pkg="amcl" type="amcl" name="amcl" clear_params="true">
       <!-- [新增/修改] 将你 RViz 测得的值填入这里 -->
-      <param name="initial_pose_x" value="-0.196"/>
-      <param name="initial_pose_y" value="0.222"/>
-      <param name="initial_pose_a" value="0.009"/>
+      <param name="initial_pose_x" value="-0.179"/>
+      <param name="initial_pose_y" value="0.273"/>
+      <param name="initial_pose_a" value="-0.040"/>
 
       <!-- [可选] 初始散布范围 (协方差) -->
       <!-- 因为手工摆车总会有误差，保留一定的散布范围让粒子云自我纠正 -->
-      <param name="initial_cov_xx" value="0.25"/>
+      <!-- <param name="initial_cov_xx" value="0.25"/>
       <param name="initial_cov_yy" value="0.25"/>
+      <param name="initial_cov_aa" value="0.2"/> -->
+
+      <param name="initial_cov_xx" value="0"/>
+      <param name="initial_cov_yy" value="1.6"/>
       <param name="initial_cov_aa" value="0.2"/>
 
       <param name="use_map_topic" value="$(arg use_map_topic)"/>
@@ -25,7 +29,11 @@
       <param name="odom_model_type" value="omni-corrected"/>
       <!-- <param name="odom_model_type" value="omnid"/> -->
       <!-- <param name="odom_model_type" value="diff"/> -->
-      <!-- <param name="odom_model_type" value="diff-corrected"/> -->
+      <!-- <param name="odom_model_type"
+      
+      
+      
+      】 value="diff-corrected"/> -->
       <param name="odom_alpha5" value="0.1"/>
       <param name="gui_publish_rate" value="10.0"/>
       <param name="laser_max_beams" value="60"/>

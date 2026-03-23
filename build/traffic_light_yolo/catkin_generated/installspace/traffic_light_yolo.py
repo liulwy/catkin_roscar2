@@ -144,14 +144,14 @@ class TrafficLightDetector:
         idx_center = int(round(angle_diff / self.lidar_angle_increment))
         idx_center = idx_center % len(self.lidar_ranges)
 
-        # 3. 查找 +-2° 的雷达数据
-        angle_range = np.radians(2)
+        # 3. 查找 +-5° 的雷达数据
+        angle_range = np.radians(5)
         idx_offset = int(round(angle_range / self.lidar_angle_increment))
 
         valid_distances = []
         raw_data = []
 
-        # 完整提取 +-2° 内的所有原始数据用于打印
+        # 完整提取 +-5° 内的所有原始数据用于打印
         for i in range(-idx_offset, idx_offset + 1):
             idx = (idx_center + i) % len(self.lidar_ranges)
             d = self.lidar_ranges[idx]
