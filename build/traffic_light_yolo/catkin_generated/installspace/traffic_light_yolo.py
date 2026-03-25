@@ -19,7 +19,7 @@ from cv_bridge import CvBridge
 from ultralytics import YOLO
 from std_msgs.msg import String
 
-OPEN_ANNOTED = 0
+OPEN_ANNOTED = 0  # 是否发布带检测框的图像话题，0=不发布，1=发布（会增加CPU负担）
 
 class TrafficLightDetector:
 
@@ -100,32 +100,6 @@ class TrafficLightDetector:
         self.lidar_angle_max = msg.angle_max
         self.lidar_ranges = list(msg.ranges)
 
-        # [!!! 关键修改 !!!] 注释掉下面这块写文件的代码，它是延迟的罪魁祸首
-        # if hasattr(self, 'lidar_file'):
-        #     data_with_angles = []
-        #     for i, distance in enumerate(self.lidar_ranges):
-        #         # 计算当前索引对应的弧度
-        #         angle_rad = self.lidar_angle_min + i * self.lidar_angle_increment
-        #         # 转换为角度
-        #         angle_deg = np.degrees(angle_rad)
-        #         # 保留3位小数
-        #         data_with_angles.append((round(angle_deg, 2), round(distance, 3)))
-        #     
-        #     self.lidar_file.write(str(data_with_angles) + "\n")
-
-        # 调试：打印雷达基本参数（只打印一次）
-        if not hasattr(self, '_lidar_debug_printed'):
-            self._lidar_debug_printed = True
-            total = len(self.lidar_ranges)
-            idx_front = int(round((0.0 - msg.angle_min) / msg.angle_increment)) % total
-            rospy.logwarn("=== 雷达参数 ===")
-            rospy.logwarn("angle_min=%.4f rad (%.1f°)", msg.angle_min, np.degrees(msg.angle_min))
-            rospy.logwarn("angle_max=%.4f rad (%.1f°)", msg.angle_max, np.degrees(msg.angle_max))
-            rospy.logwarn("angle_increment=%.6f rad (%.4f°)", msg.angle_increment, np.degrees(msg.angle_increment))
-            rospy.logwarn("总点数: %d, 正前方索引: %d", total, idx_front)
-            rospy.logwarn("正前方附近距离(idx %d±3): %s", idx_front,
-                [round(self.lidar_ranges[(idx_front+i) % total], 3) for i in range(-3, 4)])
-
     def calculate_distance(self, u, label=""):
         if not self.lidar_ranges or self.lidar_angle_increment == 0:
             return float('inf')
@@ -167,17 +141,6 @@ class TrafficLightDetector:
 
         rospy.loginfo("检测到 %s 灯, 目标像素: u=%d, 相机角度: %.2f°, 雷达角度: %.2f°, 雷达距离(最小): %.3fm",
                       label, u, np.degrees(theta_rad), np.degrees(theta_lidar), distance)
-        # rospy.loginfo("目标角度+-2°内原始雷达数据(米): %s", raw_data)
-
-        # 调试：打印角度映射中间值
-        # total = len(self.lidar_ranges)
-        # idx_front = int(round((self.lidar_offset_angle - self.lidar_angle_min) / self.lidar_angle_increment)) % total
-        # rospy.logwarn("=== 角度映射调试 ===")
-        # rospy.logwarn("camera_cx=%.1f, camera_fx=%.1f, u=%d", self.camera_cx, self.camera_fx, u)
-        # rospy.logwarn("theta_rad=%.4f (%.2f°), theta_lidar=%.4f (%.2f°)", theta_rad, np.degrees(theta_rad), theta_lidar, np.degrees(theta_lidar))
-        # rospy.logwarn("idx_center=%d, idx_front=%d, 差值=%d", idx_center, idx_front, idx_center - idx_front)
-        # rospy.logwarn("相机正前方(idx=%d)距离: %.3fm, 目标(idx=%d)距离: %.3fm", idx_front, self.lidar_ranges[idx_front % total], idx_center, self.lidar_ranges[idx_center % total])
-
         return distance
 
     def detect_light(self, results):

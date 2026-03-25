@@ -89,13 +89,6 @@ class MultiWaypointNavigator(object):
             rospy.Subscriber('/move_base_simple/goal', PoseStamped, self._rviz_goal_callback)
             rospy.loginfo('[%s] 已启用 rviz 点击目标输入. max_waypoints=%d', self.ns, self.max_waypoints)
 
-        # # 如果参数给了预设的 waypoint 列表，预先加入队列
-        # if isinstance(self.waypoints, list) and len(self.waypoints) > 0:
-        #     for wp in self.waypoints:
-        #         if len(self.waypoint_queue) >= self.max_waypoints:
-        #             rospy.logwarn('[%s] waypoint 参数列表超过 max_waypoints (%d)，额外部分忽略', self.ns, self.max_waypoints)
-        #             break
-        #         self.waypoint_queue.append(wp)
 
         # 若没有 waypoint 并且未启用 rviz 订阅，则使用默认测试值
         if not self.waypoint_queue and not self.use_rviz_waypoints:
@@ -112,6 +105,7 @@ class MultiWaypointNavigator(object):
         # 初始化红绿灯相关状态
         self.current_light_color = "none"
         self.light_distance = float('inf')
+        self.prev_red_distance = None
         self.is_waiting_for_light = False
         self.traffic_light_sub = None
 
@@ -124,7 +118,6 @@ class MultiWaypointNavigator(object):
     def _subscribe_traffic_light(self):
         """在导航开始后订阅红绿灯结果，避免过早触发停车逻辑。"""
         if self.traffic_light_sub is None:
-            # [修改] queue_size=1 确保只处理最新消息，不处理积压的旧消息
             self.traffic_light_sub = rospy.Subscriber("/traffic_light_status", String, self.traffic_light_callback, queue_size=1)
             rospy.loginfo('[%s] 已订阅 /traffic_light_status', self.ns)
 
@@ -142,16 +135,27 @@ class MultiWaypointNavigator(object):
             if dist < 0:
                 self.light_distance = float('inf')
             else:
+                if self.current_light_color == "red" and self.light_distance != float('inf'):
+                    self.prev_red_distance = self.light_distance
                 self.light_distance = dist
             rospy.loginfo_throttle(1.0, "[%s] %s灯 距离: %.2fm", self.ns, self.current_light_color, self.light_distance)
         else:
             self.current_light_color = "none"
             self.light_distance = float('inf')
 
-        # === 核心逻辑：小于1m 且为 红灯 ===
-        if self.current_light_color == "red" and (0.9 < self.light_distance < 1.1):
+        # === 核心逻辑：小于1m（精确校验）且为 红灯 ===
+
+        red_hit = False
+        if self.current_light_color == "red" and self.light_distance < 1.1:
+            if self.prev_red_distance is not None and abs(self.light_distance - self.prev_red_distance) < 0.5:
+                red_hit = True
+        else:
+            # 非红灯时重置缓存，避免连贯性乱序
+            self.prev_red_distance = None
+
+        if red_hit:
             if not self.is_waiting_for_light:
-                rospy.logwarn("[%s] 距离红灯 %.2fm，触发停车!", self.ns, self.light_distance)
+                rospy.logwarn("[%s] 距离红灯 %.2fm, 触发停车!", self.ns, self.light_distance)
                 self.is_waiting_for_light = True
                 
                 # 1. 取消规划路径
