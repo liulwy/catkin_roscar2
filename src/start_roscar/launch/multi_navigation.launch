@@ -50,10 +50,21 @@
     <param name="model_path" value="$(arg traffic_light_model_path)" />
   </node>
 
+  <!-- ===================== -->
+  <!-- 7. 启动时自动对位（AMCL 粒子收敛） -->
+  <!-- ===================== -->
+  <node pkg="start_roscar" type="wait_for_convergence.py" name="wait_for_convergence" output="screen" required="false"/>
+
+  <!-- ===================== -->
+  <!-- 8. 多点导航 -->
+  <!-- ===================== -->
   <node pkg="start_roscar" type="multi_waypoint_nav.py" name="multi_waypoint_nav" output="screen" clear_params="true">
+    <!-- 路径文件：由 keyboard_teleop.py 遥控录制生成，也可手动编辑 -->
+    <param name="path_file" value="$(find start_roscar)/path/patrol_path.yaml"/>
     <!-- multi_waypoint_nav 独占 RViz 目标点输入并入队 -->
     <param name="use_rviz_waypoints" value="true"/>
-    <param name="require_enter_to_start" value="true"/>
+    <!-- 自动模式：定位就绪后立即开始，无需按 Enter -->
+    <param name="require_enter_to_start" value="false"/>
     <rosparam command="load" file="$(find start_roscar)/param/multi_waypoint_nav_params.yaml"/>
   </node>
 

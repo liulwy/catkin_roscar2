@@ -1,19 +1,19 @@
 #!/usr/bin/env python3
 """多点导航脚本：逐点发送目标到 move_base，并按顺序等待完成。"""
 
+import os
 import rospy  # ROS Python 客户端库
 import actionlib  # ROS action 库，用于与 move_base 等交互
 import uuid  # 生成唯一目标ID
 import threading
 import sys
+import yaml
 from actionlib_msgs.msg import GoalStatus, GoalID  # action 状态、目标ID
 from std_msgs.msg import String
 
 from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal, MoveBaseActionGoal  # move_base 动作消息
 from geometry_msgs.msg import Pose, PoseStamped, Quaternion, Twist  # 位置与姿态消息类型
 from tf.transformations import quaternion_from_euler, euler_from_quaternion  # 欧拉角<->四元数转换
-
-USE_SETTING_INPUT = 1
 
 
 class MultiWaypointNavigator(object):
@@ -52,34 +52,11 @@ class MultiWaypointNavigator(object):
         self.waypoint_queue = []
 
         # ==========================================
-        # 硬编码 7 个目标点 (用户自定义)
+        # 从 YAML 路径文件加载目标点（替代硬编码）
         # ==========================================
-        # 格式: {'x': float, 'y': float, 'yaw': float}
-        # yaw 是弧度制角度
-        if USE_SETTING_INPUT:
-            # 点位 1 (第二栋楼)
-            self.waypoint_queue.append({'x': 3.885, 'y': 0.758, 'yaw': -0.373})
-            
-            # 点位 2 (红绿灯1前2m)
-            self.waypoint_queue.append({'x': 4.658, 'y': -0.117, 'yaw': -1.545}) 
-            
-            # 点位 3 (红绿灯1前1m)
-            self.waypoint_queue.append({'x': 4.512, 'y': -2.022, 'yaw': -1.620})
+        self._load_waypoints_from_file()
 
-            # 点位 4 (转向修正)
-            self.waypoint_queue.append({'x': 3.600, 'y': -2.240, 'yaw': 3.109})
-            
-            # 点位 4 (红绿灯2前1m) 
-            self.waypoint_queue.append({'x': 1.882, 'y': -2.469, 'yaw': 3.109})
-            
-            # 点位 5 (请在此处修改坐标)
-            self.waypoint_queue.append({'x': 2.660, 'y': -0.851, 'yaw': 1.971})
-            
-            # 点位 6 (请在此处修改坐标)
-            # self.waypoint_queue.append({'x': 0.551, 'y': 0.578, 'yaw': 3.079})
-            self.waypoint_queue.append({'x': 0, 'y': 0, 'yaw': 3.079})
-
-            rospy.loginfo('[%s] 已加载预设的 %d 个目标点', self.ns, len(self.waypoint_queue))
+        rospy.loginfo('[%s] 已加载 %d 个目标点', self.ns, len(self.waypoint_queue))
         
         self.current_index = 0
         self.start_event = threading.Event()
@@ -109,6 +86,9 @@ class MultiWaypointNavigator(object):
         self.is_waiting_for_light = False
         self.traffic_light_sub = None
 
+        # 定位收敛状态：等待 wait_for_convergence 发来 "ready" 信号
+        self.localization_ready = False
+
         if self.require_enter_to_start:
             self._start_enter_listener()
         else:
@@ -121,6 +101,37 @@ class MultiWaypointNavigator(object):
             self.traffic_light_sub = rospy.Subscriber("/traffic_light_status", String, self.traffic_light_callback, queue_size=1)
             rospy.loginfo('[%s] 已订阅 /traffic_light_status', self.ns)
 
+    def _load_waypoints_from_file(self):
+        """从 YAML 路径文件加载目标点，优先使用 rosparam 指定的文件。"""
+        path_file = rospy.get_param('~path_file', '')
+        if path_file and os.path.exists(path_file):
+            try:
+                with open(path_file, 'r') as f:
+                    data = yaml.safe_load(f)
+                if data and 'waypoints' in data:
+                    for wp in data['waypoints']:
+                        self.waypoint_queue.append({
+                            'x': float(wp['x']),
+                            'y': float(wp['y']),
+                            'yaw': float(wp['yaw']),
+                        })
+                    rospy.loginfo('[%s] 从文件加载路径: %s (%d 点)',
+                                  self.ns, path_file, len(self.waypoint_queue))
+                    return
+            except Exception as e:
+                rospy.logwarn('[%s] 路径文件加载失败: %s，回退到参数服务器', self.ns, e)
+
+        # 回退：从 ~waypoints 参数加载
+        fallback = rospy.get_param('~waypoints', [])
+        if fallback:
+            for wp in fallback:
+                self.waypoint_queue.append({
+                    'x': float(wp['x']),
+                    'y': float(wp['y']),
+                    'yaw': float(wp['yaw']),
+                })
+            rospy.loginfo('[%s] 从参数服务器加载 %d 个目标点', self.ns, len(fallback))
+
     def _start_enter_listener(self):
         """启动后台线程，等待用户按下 Enter 后开始导航。"""
         listener = threading.Thread(target=self._wait_for_enter_to_start, daemon=True)
@@ -128,6 +139,14 @@ class MultiWaypointNavigator(object):
 
     def traffic_light_callback(self, msg):
         """处理红绿灯识别结果，判断距离并控制小车启停。"""
+
+        # 定位收敛信号：由 wait_for_convergence 节点发送
+        if msg.data == "ready":
+            if not self.localization_ready:
+                self.localization_ready = True
+                rospy.loginfo('[%s] 收到定位就绪信号，可以开始导航', self.ns)
+            return
+
         parts = msg.data.split(',')
         if len(parts) >= 2:
             self.current_light_color = parts[0]
@@ -308,6 +327,12 @@ class MultiWaypointNavigator(object):
     def run(self):
         """主循环：从 waypoint 队列中逐个取出目标，逐个发送并等待完成。"""
         rospy.loginfo('[%s] MultiWaypointNavigator started', self.ns)
+
+        # 等待定位收敛信号（由 wait_for_convergence 节点发布）
+        rospy.loginfo('[%s] 等待定位收敛...', self.ns)
+        while not self.localization_ready and not rospy.is_shutdown():
+            rospy.sleep(0.5)
+        rospy.loginfo('[%s] 定位已收敛，开始导航', self.ns)
 
         waypoint_index = 0
         while not rospy.is_shutdown():
