@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-键盘遥控 + 路径录制脚本
-  开车:  w=前进  x=后退  a=左转  d=右转  s=停止
+键盘遥控 + 路径录制脚本（小乌龟模式：按住动，松开停，支持组合键）
+  开车:  w=前进  s=后退  a=左转  d=右转
+         w+d=前进右转  w+a=前进左转  s+d=后退右转  s+a=后退左转
   录制:  r=开始/暂停录制  p=保存路径  c=清除/放弃录制
   调速:  1/2=减/增线速度  3/4=减/增角速度
   退出:  q
@@ -13,6 +14,7 @@ import sys
 import select
 import termios
 import tty
+import time
 import threading
 import rospy
 import yaml
@@ -22,10 +24,12 @@ from tf.transformations import euler_from_quaternion
 
 HELP_MSG = """
 ----------------------------------------------------
-  键盘遥控 + 路径录制
+  键盘遥控 + 路径录制（小乌龟模式）
 ----------------------------------------------------
-  开车:  w=前进  x=后退  a=左转  d=右转  s=停止
-  录制:  r=开始/暂停录制  p=保存路径到YAML  c=清除录制
+  开车:  w=前进  s=后退  a=左转  d=右转
+         w+d=前进右转  w+a=前进左转
+         s+d=后退右转  s+a=后退左转
+  录制:  r=开始/暂停录制  p=保存路径  c=清除录制
   调速:  1/2=减/增线速度  3/4=减/增角速度
   退出:  q
 ----------------------------------------------------
@@ -55,7 +59,7 @@ def odom_callback(msg):
             dx = x - last_sample_pose[0]
             dy = y - last_sample_pose[1]
             if (dx * dx + dy * dy) < (sample_distance * sample_distance):
-                return  # 还不够远，跳过
+                return
 
         recorded_waypoints.append({'x': round(x, 4), 'y': round(y, 4), 'yaw': round(yaw, 4)})
         last_sample_pose = (x, y, yaw)
@@ -63,8 +67,8 @@ def odom_callback(msg):
                       len(recorded_waypoints), x, y, yaw)
 
 
-def get_key(timeout=0.1):
-    """非阻塞读取单键（需在 setraw 之后调用）"""
+def get_key(timeout=0.05):
+    """非阻塞读取单键（需在 setraw 之后调用），超时返回空字符串"""
     rlist, _, _ = select.select([sys.stdin], [], [], timeout)
     if rlist:
         return sys.stdin.read(1)
@@ -83,12 +87,11 @@ if __name__ == "__main__":
                                    os.path.join(os.path.expanduser("~"),
                                                 "catkin_roscar2/src/start_roscar/path"))
 
-    # 确保保存目录存在
     if not os.path.exists(save_dir):
         os.makedirs(save_dir)
 
     # ----- 发布 & 订阅 -----
-    pub = rospy.Publisher("/cmd_vel", Twist, queue_size=1)
+    pub    = rospy.Publisher("/cmd_vel", Twist, queue_size=1)
     odom_sub = rospy.Subscriber("/odom_combined", Odometry, odom_callback, queue_size=1)
 
     twist = Twist()
@@ -97,33 +100,26 @@ if __name__ == "__main__":
     rospy.loginfo("linear=%.2f  angular=%.2f  录制采样间距=%.1fm  保存路径=%s",
                   linear, angular, sample_distance, save_dir)
 
-    # ----- 终端 raw 模式（一次性设置）-----
+    # ----- 终端 raw 模式 -----
     fd = sys.stdin.fileno()
     old_settings = termios.tcgetattr(fd)
+
+    # ===== WASD 按键状态（小乌龟模式：按住动，松开停）=====
+    key_state = {'w': False, 's': False, 'a': False, 'd': False}
+    last_drive_key_time = 0.0   # 最后一次收到驱动键的时间戳
+    HOLD_TIMEOUT = 0.12         # 超过这个时间没收到驱动键就认为松开了
 
     try:
         tty.setraw(fd)
 
         while not rospy.is_shutdown():
-            key = get_key(0.1)
+            key = get_key(0.05)   # 50ms 轮询，兼顾响应速度和 CPU
+            now = time.time()
 
-            # --- 驱动键 ---
-            if key == "w":
-                twist.linear.x = linear
-                twist.angular.z = 0.0
-            elif key == "x":
-                twist.linear.x = -linear
-                twist.angular.z = 0.0
-            elif key == "a":
-                twist.linear.x = 0.0
-                twist.angular.z = angular
-            elif key == "d":
-                twist.linear.x = 0.0
-                twist.angular.z = -angular
-            elif key == "s":
-                twist.linear.x = 0.0
-                twist.angular.z = 0.0
-
+            # --- 驱动键: 记录按下状态 ---
+            if key in key_state:
+                key_state[key] = True
+                last_drive_key_time = now
             # --- 调速键 ---
             elif key == "1":
                 linear = max(0.0, linear - linear_step)
@@ -141,18 +137,16 @@ if __name__ == "__main__":
                 angular = angular + angular_step
                 rospy.loginfo("角速度: %.2f rad/s", angular)
                 continue
-
             # --- 录制键 ---
             elif key == "r":
                 with odom_lock:
                     recording = not recording
                     if recording:
-                        last_sample_pose = None  # 重置参考点，确保录制开始即刻采样
+                        last_sample_pose = None
                         rospy.loginfo(">>> 开始录制路径（采样间距=%.1fm）", sample_distance)
                     else:
                         rospy.loginfo(">>> 暂停录制（已录制 %d 个点）", len(recorded_waypoints))
                 continue
-
             elif key == "p":
                 with odom_lock:
                     if not recorded_waypoints:
@@ -170,7 +164,6 @@ if __name__ == "__main__":
                                       filepath, len(recorded_waypoints))
                         recording = False
                 continue
-
             elif key == "c":
                 with odom_lock:
                     recording = False
@@ -178,20 +171,33 @@ if __name__ == "__main__":
                     last_sample_pose = None
                     rospy.loginfo(">>> 录制已清除")
                 continue
-
             # --- 退出键 ---
             elif key == "q":
                 rospy.loginfo("退出键盘遥控")
                 break
 
-            else:
-                # 未识别的键：不发送速度（避免无指令导致的意外）
-                continue
+            # --- 松键检测：超过 HOLD_TIMEOUT 没收到驱动键，全部清零 ---
+            if now - last_drive_key_time > HOLD_TIMEOUT:
+                for k in key_state:
+                    key_state[k] = False
+
+            # --- 计算 Twist（组合键自然支持）---
+            twist.linear.x = 0.0
+            twist.angular.z = 0.0
+
+            if key_state['w']:
+                twist.linear.x += linear
+            if key_state['s']:
+                twist.linear.x -= linear
+            if key_state['a']:
+                twist.angular.z += angular
+            if key_state['d']:
+                twist.angular.z -= angular
 
             pub.publish(twist)
 
     finally:
-        # 恢复终端设置 + 停车
+        # 恢复终端 + 停车
         twist.linear.x = 0.0
         twist.angular.z = 0.0
         pub.publish(twist)
