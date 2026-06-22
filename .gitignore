@@ -1,2 +1,27 @@
-/build/*
-/devel/*
+# ===== ROS catkin 编译产物 =====
+/build/
+/devel/
+/install/
+/logs/
+.catkin_tools/
+catkin_generated/
+
+# ===== Python 编译缓存 =====
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+
+# ===== 系统 / 编辑器 =====
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# ===== IDE =====
+.vscode/
+.idea/
+
+# ===== 日志 =====
+*.log
