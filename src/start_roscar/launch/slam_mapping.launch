@@ -1,0 +1,57 @@
+<launch>
+  <!-- ============================================================ -->
+  <!--  键盘建图 Launch 文件                                           -->
+  <!--  一键启动：底盘驱动 + 传感器 + gmapping + 键盘遥控                  -->
+  <!--                                                              -->
+  <!--  操作说明：                                                     -->
+  <!--    WASD 开车建图，q 退出（自动保存地图），m 手动保存地图             -->
+  <!--    r=录制路径  p=保存路径  c=清除录制                              -->
+  <!--    地图保存位置: $(find start_roscar)/map/roscar_map             -->
+  <!-- ============================================================ -->
+
+  <!-- 1. 启动底盘与传感器（STM32 / LiDAR / EKF / USB摄像头 / TF） -->
+  <include file="$(find start_roscar)/launch/start_roscar.launch"/>
+
+  <!-- 稍等传感器就绪（TF / scan / odom） -->
+  <param name="/delay_gmapping" value="3.0"/>
+
+  <!-- 2. Gmapping SLAM -->
+  <node pkg="gmapping" type="slam_gmapping" name="slam_gmapping" output="screen">
+    <param name="base_frame"  value="base_footprint"/>
+    <param name="odom_frame"  value="odom_combined"/>
+    <param name="map_frame"   value="map"/>
+
+    <remap from="scan" to="/scan"/>
+
+    <param name="throttle_scans" value="1"/>
+    <param name="maxUrange"   value="16.0"/>
+    <param name="sigma"       value="0.05"/>
+    <param name="kernelSize"  value="1"/>
+    <param name="lstep"       value="0.05"/>
+    <param name="astep"       value="0.05"/>
+    <param name="iterations"  value="5"/>
+
+    <param name="linearUpdate"  value="0.2"/>
+    <param name="angularUpdate" value="0.2"/>
+    <param name="temporalUpdate" value="1.0"/>
+  </node>
+
+  <!-- 3. 键盘遥控（WASD 建图，m 保存，q 退出自动保存） -->
+  <node pkg="start_roscar"
+        type="keyboard_teleop.py"
+        name="keyboard_teleop"
+        output="screen">
+    <!-- 驾驶参数 -->
+    <param name="linear"       value="0.15"/>
+    <param name="angular"      value="0.8"/>
+    <param name="linear_step"  value="0.02"/>
+    <param name="angular_step" value="0.05"/>
+    <!-- 建图保存（按 m 保存 / q 退出自动保存） -->
+    <param name="enable_map_save" value="true"/>
+    <param name="map_dir"  value="$(find start_roscar)/map"/>
+    <param name="map_name" value="roscar_map"/>
+    <!-- 路径录制保存目录 -->
+    <param name="save_dir" value="$(find start_roscar)/path"/>
+  </node>
+
+</launch>

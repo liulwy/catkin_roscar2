@@ -5,6 +5,7 @@
   开车:  w=前进  s=后退  a=左转  d=右转
          w+d=前进右转  w+a=前进左转  s+d=后退右转  s+a=后退左转
   录制:  r=开始/暂停录制  p=保存路径  c=清除/放弃录制
+  建图:  m=保存地图（需配合 slam_mapping.launch 使用）
   调速:  1/2=减/增线速度  3/4=减/增角速度
   退出:  q
 """
@@ -15,6 +16,7 @@ import select
 import termios
 import tty
 import time
+import subprocess
 import threading
 import rospy
 import yaml
@@ -30,6 +32,7 @@ HELP_MSG = """
          w+d=前进右转  w+a=前进左转
          s+d=后退右转  s+a=后退左转
   录制:  r=开始/暂停录制  p=保存路径  c=清除录制
+  建图:  m=保存地图
   调速:  1/2=减/增线速度  3/4=减/增角速度
   退出:  q
 ----------------------------------------------------
@@ -90,15 +93,59 @@ if __name__ == "__main__":
     if not os.path.exists(save_dir):
         os.makedirs(save_dir)
 
+    # ----- 建图参数 -----
+    enable_map_save = rospy.get_param("~enable_map_save", False)
+    map_dir  = rospy.get_param("~map_dir",
+                                os.path.join(os.path.expanduser("~"),
+                                             "catkin_roscar2/src/start_roscar/map"))
+    map_name = rospy.get_param("~map_name", "roscar_map")
+    map_saved = False
+
+    def do_save_map():
+        """保存 SLAM 地图（调用 map_server map_saver）"""
+        global map_saved
+        if map_saved:
+            return
+        map_path = os.path.join(map_dir, map_name)
+        os.makedirs(map_dir, exist_ok=True)
+        # 删除旧文件避免写入冲突
+        for ext in [".pgm", ".yaml"]:
+            f = map_path + ext
+            if os.path.exists(f):
+                os.remove(f)
+        rospy.loginfo("[建图] 正在保存地图到 %s ...", map_path)
+        # 短暂恢复终端，避免 raw 模式干扰子进程
+        termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
+        try:
+            ret = subprocess.call(["rosrun", "map_server", "map_saver", "-f", map_path])
+            if ret == 0:
+                map_saved = True
+                rospy.loginfo("[建图] 地图保存成功: %s.yaml / %s.pgm", map_path, map_path)
+            else:
+                rospy.logerr("[建图] map_saver 返回码 %d，保存失败", ret)
+        except Exception as e:
+            rospy.logerr("[建图] map_saver 调用异常: %s", str(e))
+        finally:
+            tty.setraw(fd)
+
     # ----- 发布 & 订阅 -----
     pub    = rospy.Publisher("/cmd_vel", Twist, queue_size=1)
     odom_sub = rospy.Subscriber("/odom_combined", Odometry, odom_callback, queue_size=1)
 
     twist = Twist()
 
+    # 注册退出回调：Ctrl+C / rosnode kill 时自动保存地图
+    def on_shutdown_cb():
+        if enable_map_save and not map_saved:
+            rospy.loginfo("[建图] 检测到退出信号，自动保存地图...")
+            do_save_map()
+    rospy.on_shutdown(on_shutdown_cb)
+
     rospy.loginfo(HELP_MSG)
     rospy.loginfo("linear=%.2f  angular=%.2f  录制采样间距=%.1fm  保存路径=%s",
                   linear, angular, sample_distance, save_dir)
+    rospy.loginfo("建图保存: %s  地图路径: %s/%s",
+                  "开启" if enable_map_save else "关闭", map_dir, map_name)
 
     # ----- 终端 raw 模式 -----
     fd = sys.stdin.fileno()
@@ -171,6 +218,15 @@ if __name__ == "__main__":
                     last_sample_pose = None
                     rospy.loginfo(">>> 录制已清除")
                 continue
+            # --- 建图键 ---
+            elif key == "m":
+                if not enable_map_save:
+                    rospy.logwarn("[建图] 未开启地图保存功能 (enable_map_save=false)")
+                elif map_saved:
+                    rospy.loginfo("[建图] 地图已保存，无需重复操作")
+                else:
+                    do_save_map()
+                continue
             # --- 退出键 ---
             elif key == "q":
                 rospy.loginfo("退出键盘遥控")
@@ -197,6 +253,11 @@ if __name__ == "__main__":
             pub.publish(twist)
 
     finally:
+        # 自动保存地图（正常 q 退出路径）
+        if enable_map_save and not map_saved:
+            rospy.loginfo("[建图] 正常退出，自动保存地图...")
+            do_save_map()
+
         # 恢复终端 + 停车
         twist.linear.x = 0.0
         twist.angular.z = 0.0
