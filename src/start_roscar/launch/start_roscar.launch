@@ -23,9 +23,16 @@
   <!-- 默认雷达装在 base_link 上方，这里发布一个静态 TF（x y z yaw pitch roll） -->
   <include file="$(find rplidar_ros)/launch/rplidar_a3.launch" />
 
-  <!-- 4. USB 摄像头 usb_cam -->
-  <!-- 默认摄像头装在前端，发布静态 TF。注意：child_frame_id 需与 usb_cam 节点参数一致 -->
-  <include file="$(find usb_cam)/launch/usb_cam-test.launch" />
+  <!-- 4. USB 摄像头 usb_cam（可选，不插入摄像头也不会拖死 launch） -->
+  <arg name="video_device" default="/dev/video0" />
+  <node name="usb_cam" pkg="usb_cam" type="usb_cam_node" required="false" output="log">
+    <param name="video_device" value="$(arg video_device)" />
+    <param name="image_width"  value="640" />
+    <param name="image_height" value="480" />
+    <param name="pixel_format" value="mjpeg" />
+    <param name="camera_frame_id" value="usb_cam" />
+    <param name="io_method" value="mmap" />
+  </node>
 
 </launch>
 

@@ -102,9 +102,9 @@ if __name__ == "__main__":
 
     twist = Twist()
 
-    rospy.loginfo(HELP_TEXT)
-    rospy.loginfo("线性速度: %.2f m/s | 角速度: %.2f rad/s | 录制间距: %.1fm | 保存路径: %s",
-                  linear, angular, sample_distance, save_dir)
+    print(HELP_TEXT)
+    print("线性速度: %.2f m/s | 角速度: %.2f rad/s | 录制间距: %.1fm | 保存路径: %s" %
+          (linear, angular, sample_distance, save_dir))
 
     # ----- 终端 raw 模式 -----
     fd = sys.stdin.fileno()
