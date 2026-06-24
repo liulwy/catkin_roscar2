@@ -4,8 +4,10 @@
   <!-- ===================== -->
   <include file="$(find start_roscar)/launch/start_roscar.launch" />
 
-  <!-- 毫米波雷达避障（可选） -->
-  <arg name="use_radar" default="false" doc="Enable ARS408 radar obstacle detection"/>
+  <!-- ===================== -->
+  <!-- 2. 毫米波雷达避障（可选，用 use_radar:=true 开启） -->
+  <!-- ===================== -->
+  <arg name="use_radar" default="true" doc="Enable ARS408 radar obstacle detection"/>
   <include if="$(arg use_radar)" file="$(find start_roscar)/launch/include/radar_obstacle.launch" />
 
   <!-- ===================== -->
@@ -32,9 +34,7 @@
     <rosparam command="load" file="$(find start_roscar)/param/global_costmap_params.yaml"/>
     <!-- 局部 costmap -->
     <rosparam command="load" file="$(find start_roscar)/param/local_costmap_params.yaml"/>
-    <!-- costmap 通用参数 -->
-    <!-- <rosparam command="load" file="$(find start_roscar)/param/costmap_common_params.yaml"/> -->
-    
+
      <!-- costmap 通用参数 (同时挂到局部和全局代价地图) -->
     <rosparam ns="local_costmap" command="load" file="$(find start_roscar)/param/costmap_common_params.yaml"/>
     <rosparam ns="global_costmap" command="load" file="$(find start_roscar)/param/costmap_common_params.yaml"/>
