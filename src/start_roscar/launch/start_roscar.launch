@@ -1,6 +1,6 @@
 <launch>
   <!-- Arguments参数 -->
-  <arg name="car_mode"  default="senior_omni" 
+  <arg name="car_mode"  default="senior_diff" 
        doc="opt: senior_akm,senior_mec_bs,senior_mec_dl"/>
   <!-- 内部变量：是否重复加载，默认false -->
   <arg name="repeat" default="false"/>

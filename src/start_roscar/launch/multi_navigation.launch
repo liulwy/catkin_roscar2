@@ -29,7 +29,12 @@
     <!-- 局部 costmap -->
     <rosparam command="load" file="$(find start_roscar)/param/local_costmap_params.yaml"/>
     <!-- costmap 通用参数 -->
-    <rosparam command="load" file="$(find start_roscar)/param/costmap_common_params.yaml"/>
+    <!-- <rosparam command="load" file="$(find start_roscar)/param/costmap_common_params.yaml"/> -->
+    
+     <!-- costmap 通用参数 (同时挂到局部和全局代价地图) -->
+    <rosparam ns="local_costmap" command="load" file="$(find start_roscar)/param/costmap_common_params.yaml"/>
+    <rosparam ns="global_costmap" command="load" file="$(find start_roscar)/param/costmap_common_params.yaml"/>
+
     <!-- Global Planner 参数 -->
     <rosparam command="load" file="$(find start_roscar)/param/base_global_planner_param.yaml"/>
     <!-- TEB Local Planner 参数 -->
@@ -53,7 +58,7 @@
   <!-- ===================== -->
   <!-- 7. 启动时自动对位（AMCL 粒子收敛） -->
   <!-- ===================== -->
-  <node pkg="start_roscar" type="wait_for_convergence.py" name="wait_for_convergence" output="screen" required="false"/>
+  <!-- <node pkg="start_roscar" type="wait_for_convergence.py" name="wait_for_convergence" output="screen" required="false"/> -->
 
   <!-- ===================== -->
   <!-- 8. 多点导航 -->
