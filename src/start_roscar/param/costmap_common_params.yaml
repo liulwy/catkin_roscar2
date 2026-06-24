@@ -40,7 +40,7 @@ obstacle_layer:
   #是否开启障碍层
   enabled: true
   #设置障碍层的观测源名称，可以一次设置多个观测源observation_sources: scan, scan2, camera
-  observation_sources: scan
+  observation_sources: scan person_radar
   #设置对应观测源参数
   scan:
     #观测源数据话题名称（加 / 避免被 move_base 命名空间干扰）
@@ -66,6 +66,19 @@ obstacle_layer:
     #多少范围内障碍物会被加入代价地图，单位：m
     obstacle_range: 2.5
     #多少范围内障碍物会被追踪，单位：m
+    raytrace_range: 3.0
+
+  person_radar:
+    topic: /person_radar/obstacles
+    sensor_frame: radar_link
+    data_type: PointCloud2
+    observation_persistence: 2.0
+    expected_update_rate: 0.0
+    clearing: false
+    marking: true
+    max_obstacle_height: 2.0
+    min_obstacle_height: 0.0
+    obstacle_range: 2.5
     raytrace_range: 3.0
 
   #在观测源基础上再次进行设置的参数

@@ -5,6 +5,12 @@
   <include file="$(find start_roscar)/launch/start_roscar.launch" />
 
   <!-- ===================== -->
+  <!-- 2. 毫米波雷达避障（可选） -->
+  <!-- ===================== -->
+  <arg name="use_radar" default="false" doc="Enable ARS408 radar obstacle detection"/>
+  <include if="$(arg use_radar)" file="$(find start_roscar)/launch/include/radar_obstacle.launch" />
+
+  <!-- ===================== -->
   <!-- 3. 地图服务器 -->
   <!-- ===================== -->
   <arg name="map_file" default="$(find start_roscar)/map/roscar_map.yaml"/>
