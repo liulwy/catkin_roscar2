@@ -62,7 +62,7 @@
   <!-- ===================== -->
   <!-- 7. 启动时自动对位（AMCL 粒子收敛） -->
   <!-- ===================== -->
-  <!-- <node pkg="start_roscar" type="wait_for_convergence.py" name="wait_for_convergence" output="screen" required="false"/> -->
+  <node pkg="start_roscar" type="wait_for_convergence.py" name="wait_for_convergence" output="screen" required="false"/>
 
   <!-- ===================== -->
   <!-- 8. 多点导航 -->

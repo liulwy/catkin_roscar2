@@ -14,7 +14,7 @@
   <!-- 3. 地图服务器 -->
   <!-- ===================== -->
   <arg name="map_file" default="$(find start_roscar)/map/roscar_map.yaml"/>
-  <node pkg="map_server" type="map_server" name="map_server_roscar" args="$(arg map_file)" output="screen"/>
+  <node pkg="merver" type="map_server" name="map_server_roscar" args="$(arg map_file)" output="screen"/>
 
   <!-- ===================== -->
   <!-- 4. AMCL 定位 -->
@@ -48,8 +48,8 @@
     <param name="use_sim_time" value="false"/>
   </node>
 
- <node pkg="start_roscar" type="multi_waypoint_nav.py" name="multi_waypoint_nav" output="screen" clear_params="true">
+ <!-- <node pkg="start_roscar" type="multi_waypoint_nav.py" name="multi_waypoint_nav" output="screen" clear_params="true">
     <rosparam command="load" file="$(find start_roscar)/param/multi_waypoint_nav_params.yaml"/>
-</node>
+</node> -->
 
 </launch>

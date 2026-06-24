@@ -8,8 +8,8 @@
 
     <node pkg="amcl" type="amcl" name="amcl" clear_params="true">
       <!-- [新增/修改] 将你 RViz 测得的值填入这里 -->
-      <param name="initial_pose_x" value="-0.179"/>
-      <param name="initial_pose_y" value="0.273"/>
+      <param name="initial_pose_x" value="-0.192"/>
+      <param name="initial_pose_y" value="0.166"/>
       <param name="initial_pose_a" value="-0.040"/>
 
       <!-- 初始散布范围 (协方差)：手工摆车总有误差，给AMCL粒子自我纠正的空间 -->
@@ -22,9 +22,9 @@
       <!-- 使用rtabmap分布的Map，连接TF树 -->
       <remap from="/map" to="/$(arg map_topic)"/>
       <!-- Publish scans from best pose at a max of 10 Hz -->
-      <param name="odom_model_type" value="omni-corrected"/>
+      <!-- <param name="odom_model_type" value="omni-corrected"/> -->
       <!-- <param name="odom_model_type" value="omnid"/> -->
-      <!-- <param name="odom_model_type" value="diff"/> -->
+      <param name="odom_model_type" value="diff"/>
       <!-- <param name="odom_model_type"
       
       

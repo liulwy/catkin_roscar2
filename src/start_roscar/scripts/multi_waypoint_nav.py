@@ -165,7 +165,7 @@ class MultiWaypointNavigator(object):
         # === 核心逻辑：小于1m（精确校验）且为 红灯 ===
 
         red_hit = False
-        if self.current_light_color == "red" and self.light_distance < 1.1:
+        if self.current_light_color == "red" and self.light_distance < 1.3:
             if self.prev_red_distance is not None and abs(self.light_distance - self.prev_red_distance) < 0.5:
                 red_hit = True
         else:
