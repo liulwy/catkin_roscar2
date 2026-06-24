@@ -22,18 +22,17 @@ from geometry_msgs.msg import Twist
 from nav_msgs.msg import Odometry
 from tf.transformations import euler_from_quaternion
 
-HELP_MSG = [
-    "----------------------------------------------------",
-    "  键盘遥控 + 路径录制（小乌龟模式）",
-    "----------------------------------------------------",
-    "  开车:  w=前进  s=后退  a=左转  d=右转",
-    "         w+d=前进右转  w+a=前进左转",
-    "         s+d=后退右转  s+a=后退左转",
-    "  录制:  r=自动录制  j=手动打点  p=保存路径  c=清除",
-    "  调速:  1/2=减/增线速度  3/4=减/增角速度",
-    "  退出:  q",
-    "----------------------------------------------------",
-]
+HELP_TEXT = """\
+----------------------------------------------------
+  键盘遥控 + 路径录制（小乌龟模式）
+----------------------------------------------------
+  开车:  w=前进  s=后退  a=左转  d=右转
+         w+d=前进右转  w+a=前进左转
+         s+d=后退右转  s+a=后退左转
+  录制:  r=自动录制  j=手动打点  p=保存路径  c=清除
+  调速:  1/2=减/增线速度  3/4=减/增角速度
+  退出:  q
+----------------------------------------------------"""
 
 # ===== 路径录制状态 =====
 recording = False
@@ -47,7 +46,7 @@ latest_pose = None            # (x, y, yaw)
 pose_lock = threading.Lock()
 
 def odom_callback(msg):
-    """后台订阅 /odom_combined，始终缓存最新位姿；自动录制时按距离采样"""
+    """后台订阅 /odom，始终缓存最新位姿；自动录制时按距离采样"""
     global recording, recorded_waypoints, last_sample_pose, latest_pose
 
     x = msg.pose.pose.position.x
@@ -99,14 +98,13 @@ if __name__ == "__main__":
 
     # ----- 发布 & 订阅 -----
     pub    = rospy.Publisher("/cmd_vel", Twist, queue_size=1)
-    odom_sub = rospy.Subscriber("/odom_combined", Odometry, odom_callback, queue_size=1)
+    odom_sub = rospy.Subscriber("/odom", Odometry, odom_callback, queue_size=1)
 
     twist = Twist()
 
-    for line in HELP_MSG:
-        rospy.loginfo(line)
-    rospy.loginfo("线性速度: %.2f m/s | 角速度: %.2f rad/s | 录制间距: %.1fm | 保存路径: %s",
-                  linear, angular, sample_distance, save_dir)
+    print(HELP_TEXT)
+    print("线性速度: %.2f m/s | 角速度: %.2f rad/s | 录制间距: %.1fm | 保存路径: %s" %
+          (linear, angular, sample_distance, save_dir))
 
     # ----- 终端 raw 模式 -----
     fd = sys.stdin.fileno()
@@ -163,7 +161,12 @@ if __name__ == "__main__":
                         x, y, yaw = latest_pose
                         recorded_waypoints.append({'x': round(x, 4), 'y': round(y, 4), 'yaw': round(yaw, 4)})
                         idx = len(recorded_waypoints)
-                        rospy.loginfo("\n>>> [手动打点] 路径点 #%d: x=%.3f  y=%.3f  yaw=%.3f\n", idx, x, y, yaw)
+                        rospy.loginfo(
+                            "\n=========================================\n"
+                            "  [手动打点] 路径点 #%d:\n"
+                            "    x=%.3f  y=%.3f  yaw=%.3f\n"
+                            "=========================================\n",
+                            idx, x, y, yaw)
                 continue
             elif key == "p":
                 with odom_lock:
