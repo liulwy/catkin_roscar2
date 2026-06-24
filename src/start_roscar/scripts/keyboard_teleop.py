@@ -24,19 +24,19 @@ from geometry_msgs.msg import Twist
 from nav_msgs.msg import Odometry
 from tf.transformations import euler_from_quaternion
 
-HELP_MSG = """
-----------------------------------------------------
-  键盘遥控 + 路径录制（小乌龟模式）
-----------------------------------------------------
-  开车:  w=前进  s=后退  a=左转  d=右转
-         w+d=前进右转  w+a=前进左转
-         s+d=后退右转  s+a=后退左转
-  录制:  r=开始/暂停录制  p=保存路径  c=清除录制
-  建图:  m=保存地图
-  调速:  1/2=减/增线速度  3/4=减/增角速度
-  退出:  q
-----------------------------------------------------
-"""
+HELP_MSG = [
+    "----------------------------------------------------",
+    "  键盘遥控 + 路径录制（小乌龟模式）",
+    "----------------------------------------------------",
+    "  开车:  w=前进  s=后退  a=左转  d=右转",
+    "         w+d=前进右转  w+a=前进左转",
+    "         s+d=后退右转  s+a=后退左转",
+    "  录制:  r=开始/暂停录制  p=保存路径  c=清除录制",
+    "  建图:  m=保存地图",
+    "  调速:  1/2=减/增线速度  3/4=减/增角速度",
+    "  退出:  q",
+    "----------------------------------------------------",
+]
 
 # ===== 路径录制状态 =====
 recording = False
@@ -66,7 +66,7 @@ def odom_callback(msg):
 
         recorded_waypoints.append({'x': round(x, 4), 'y': round(y, 4), 'yaw': round(yaw, 4)})
         last_sample_pose = (x, y, yaw)
-        rospy.loginfo("  [录制] 采样点 #%d: (%.3f, %.3f, %.3f)",
+        rospy.loginfo("[录制] 采样点 #%d: (%.3f, %.3f, %.3f)",
                       len(recorded_waypoints), x, y, yaw)
 
 
@@ -141,10 +141,11 @@ if __name__ == "__main__":
             do_save_map()
     rospy.on_shutdown(on_shutdown_cb)
 
-    rospy.loginfo(HELP_MSG)
-    rospy.loginfo("linear=%.2f  angular=%.2f  录制采样间距=%.1fm  保存路径=%s",
+    for line in HELP_MSG:
+        rospy.loginfo(line)
+    rospy.loginfo("线性速度: %.2f m/s | 角速度: %.2f rad/s | 录制间距: %.1fm | 保存路径: %s",
                   linear, angular, sample_distance, save_dir)
-    rospy.loginfo("建图保存: %s  地图路径: %s/%s",
+    rospy.loginfo("建图保存: %s | 地图路径: %s/%s",
                   "开启" if enable_map_save else "关闭", map_dir, map_name)
 
     # ----- 终端 raw 模式 -----
