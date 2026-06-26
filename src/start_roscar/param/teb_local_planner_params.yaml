@@ -92,7 +92,7 @@ TebLocalPlannerROS:
   weight_adapt_factor: 2
 
   #不同拓扑中的并行规划
-  enable_homotopy_class_planning: True
+  enable_homotopy_class_planning: False
   enable_multithreading: True
   max_number_classes: 4
   selection_cost_hysteresis: 1.0
