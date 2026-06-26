@@ -49,13 +49,20 @@ def odom_callback(msg):
     """后台订阅 /odom，始终缓存最新位姿；自动录制时按距离采样"""
     global recording, recorded_waypoints, last_sample_pose, latest_pose
 
-    x = msg.pose.pose.position.x
-    y = msg.pose.pose.position.y
-    q = msg.pose.pose.orientation
-    _, _, yaw = euler_from_quaternion([q.x, q.y, q.z, q.w])
+    try:
+        x = msg.pose.pose.position.x
+        y = msg.pose.pose.position.y
+        q = msg.pose.pose.orientation
+        _, _, yaw = euler_from_quaternion([q.x, q.y, q.z, q.w])
+    except Exception as e:
+        rospy.logerr("[odom_callback] 解析里程计数据异常: %s", e)
+        return
 
     with pose_lock:
         latest_pose = (x, y, yaw)
+
+    # 诊断日志：每秒打印一次，确认回调是否被触发
+    rospy.loginfo_throttle(1.0, "[odom_callback] 收到里程计: x=%.3f y=%.3f yaw=%.3f", x, y, yaw)
 
     if not recording:
         return
@@ -99,6 +106,17 @@ if __name__ == "__main__":
     # ----- 发布 & 订阅 -----
     pub    = rospy.Publisher("/cmd_vel", Twist, queue_size=1)
     odom_sub = rospy.Subscriber("/odom", Odometry, odom_callback, queue_size=1)
+
+    # 诊断：等待 /odom 话题首次连接，超时 5 秒
+    rospy.loginfo("等待 /odom 话题连接...")
+    start_wait = rospy.Time.now()
+    while odom_sub.get_num_connections() == 0 and not rospy.is_shutdown():
+        if (rospy.Time.now() - start_wait).to_sec() > 5.0:
+            rospy.logwarn("/odom 话题 5 秒内无发布者连接！请检查 driver_node 是否启动。")
+            break
+        rospy.sleep(0.1)
+    if odom_sub.get_num_connections() > 0:
+        rospy.loginfo("/odom 话题已连接，发布者数量: %d", odom_sub.get_num_connections())
 
     twist = Twist()
 
@@ -216,6 +234,8 @@ if __name__ == "__main__":
                 twist.angular.z -= angular
 
             pub.publish(twist)
+            # 出让 GIL 给 subscriber 回调线程，防止 CPU 高负载时回调被饿死
+            rospy.sleep(0.001)
 
     finally:
         # 恢复终端 + 停车

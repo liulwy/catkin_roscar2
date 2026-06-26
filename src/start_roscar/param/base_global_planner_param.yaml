@@ -26,12 +26,18 @@ GlobalPlanner:
   #是否对通过PointCloud2计算出来的potential area进行可视化
   visualize_potential: false
 
-  lethal_cost: 253
-  neutral_cost: 50
-  cost_factor: 3.0
-  #How to set the orientation of each point 
+  # --- 代价地图代价值设定 ---
+  lethal_cost: 253             # 致命障碍物的代价值（通常为253，接近255视为完全占用）
+  neutral_cost: 50             # 中性代价值，介于自由与障碍之间
+  cost_factor: 3.0             # 代价因子，用于将代价地图值转换为路径规划的边代价
+
+  # --- 路径点朝向设定 ---
+  # 设置每个路径点朝向的方式：0=None, 1=Forward, 2=Interpolate, 3=ForwardThenInterpolate
   orientation_mode: 0
-  #What window to use to determine the orientation based on the position derivative specified by the orientation mode
+  # 根据 orientation_mode 指定的位置导数确定朝向时使用的窗口大小
   orientation_window_size: 1
-  #用完全占用方格勾勒出全局代价地图。对于“非static_map”(rolling_window)的全局代价地图，需要将其设置为false
+
+  # --- 地图边界 ---
+  # 用完全占用方格勾勒出全局代价地图轮廓。
+  # 对于非 static_map（rolling_window）的全局代价地图，需要设置为 false
   outline_map: true
