@@ -60,6 +60,9 @@ def odom_callback(msg):
     with pose_lock:
         latest_pose = (x, y, yaw)
 
+    # 诊断日志：每秒打印一次，确认回调是否被触发
+    rospy.loginfo_throttle(1.0, "[odom_callback] 收到里程计: x=%.3f y=%.3f yaw=%.3f", x, y, yaw)
+
     if not recording:
         return
 
@@ -108,10 +111,21 @@ if __name__ == "__main__":
     pub    = rospy.Publisher("/cmd_vel", Twist, queue_size=1)
     odom_sub = rospy.Subscriber("/odom", Odometry, odom_callback, queue_size=1)
 
+    # 诊断：等待 /odom 话题首次连接，超时 5 秒
+    rospy.loginfo("等待 /odom 话题连接...")
+    start_wait = rospy.Time.now()
+    while odom_sub.get_num_connections() == 0 and not rospy.is_shutdown():
+        if (rospy.Time.now() - start_wait).to_sec() > 5.0:
+            rospy.logwarn("/odom 话题 5 秒内无发布者连接！请检查 driver_node 是否启动。")
+            break
+        rospy.sleep(0.1)
+    if odom_sub.get_num_connections() > 0:
+        rospy.loginfo("/odom 话题已连接，发布者数量: %d", odom_sub.get_num_connections())
+
     twist = Twist()
 
     print(HELP_TEXT)
-    _print("线性速度: %.2f m/s | 角速度: %.2f rad/s | 录制间距: %.1fm | 保存路径: %s" %
+    print("线性速度: %.2f m/s | 角速度: %.2f rad/s | 录制间距: %.1fm | 保存路径: %s" %
           (linear, angular, sample_distance, save_dir))
 
     # ----- 终端 raw 模式 -----
@@ -169,10 +183,12 @@ if __name__ == "__main__":
                         x, y, yaw = latest_pose
                         recorded_waypoints.append({'x': round(x, 4), 'y': round(y, 4), 'yaw': round(yaw, 4)})
                         idx = len(recorded_waypoints)
-                        _print("=" * 45)
-                        _print("  [手动打点] 路径点 #%d" % idx)
-                        _print("    x=%.4f   y=%.4f   yaw=%.4f" % (x, y, yaw))
-                        _print("=" * 45)
+                        rospy.loginfo(
+                            "\n=========================================\n"
+                            "  [手动打点] 路径点 #%d:\n"
+                            "    x=%.3f  y=%.3f  yaw=%.3f\n"
+                            "=========================================\n",
+                            idx, x, y, yaw)
                 continue
             elif key == "p":
                 with odom_lock:

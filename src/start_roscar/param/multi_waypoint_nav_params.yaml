@@ -1,14 +1,23 @@
+# ===== 多点导航参数 =====
+# 此文件由 multi_waypoint_nav.py 节点加载
+# 如果同时指定了 path_file 参数（加载 YAML 路径文件），则 waypoints 列表作为回退
+
+# --- 默认目标点列表（硬编码回退）---
+# 当未从 patrol_path.yaml 加载到路径点且未从参数服务器获取时使用
 waypoints:
-  - {x: 0.5, y: 0.0, yaw: 0.0}
-  - {x: 0.5, y: 0.5, yaw: 1.57}
-  - {x: 0.0, y: 0.5, yaw: 3.14}
+  - {x: 0.5, y: 0.0, yaw: 0.0}      # 第1个点：正前方 0.5m
+  - {x: 0.5, y: 0.5, yaw: 1.57}     # 第2个点：右转 90°
+  - {x: 0.0, y: 0.5, yaw: 3.14}     # 第3个点：掉头 180°
 
-use_rviz_waypoints: true
-max_waypoints: 20
+# --- RViz 交互参数 ---
+use_rviz_waypoints: true              # 是否允许从 RViz "2D Nav Goal" 点击添加目标点
+max_waypoints: 20                     # RViz 模式下最多允许多少个排队目标点
 
-require_enter_to_start: true
-min_waypoints_to_start: 1
+# --- 启动控制 ---
+require_enter_to_start: true          # 是否需要在终端按 Enter 后才开始导航
+min_waypoints_to_start: 1             # 最少需要多少个目标点才能开始导航
 
-arrival_tolerance: 0.3
-wait_after_arrival: 1.0
-max_retries: 2
+# --- 到达判定 ---
+arrival_tolerance: 0.3                # 到达目标点的距离容差，单位：m
+wait_after_arrival: 1.0               # 到达后原地等待时间（缓冲），单位：s
+max_retries: 2                        # 单个目标点导航失败后最多重试次数
