@@ -6,7 +6,7 @@ TebLocalPlannerROS:
   map_frame: map #代价地图的TF参考坐标系
 
   #机器人参数
-  max_vel_x: 0.3 #最大x前向速度，单位：m/s
+  max_vel_x: 0.15 #最大x前向速度，单位：m/s
   max_vel_y: 0.0 #最大y前向速度，单位：m/s，非全向移动小车需要设置为0
   max_vel_x_backwards: 0.5 #最大后退速度，单位：m/s
   max_vel_theta: 1.5  #最大转向角速度，单位：rad/s
@@ -16,7 +16,7 @@ TebLocalPlannerROS:
 
   #阿克曼小车参数，非阿克曼小车设置为0
   min_turning_radius: 0 #机器人最小转弯半径
-  wheelbase: 0.322 #机器人轴距，前轮与后轮的距离
+  wheelbase: 0 #机器人轴距，前轮与后轮的距离
   cmd_angle_instead_rotvel: False #true则cmd_vel/angular/z内的数据是舵机角度
                                   #无论是不是阿克曼小车都设置为false，因为我们的阿克曼机器人内部进行了速度转换
 
@@ -53,11 +53,11 @@ TebLocalPlannerROS:
   costmap_converter_spin_thread: True
   costmap_converter_rate: 5
   include_dynamic_obstacles: True 
-  dynamic_obstacle_inflation_dist: 0.6
+  dynamic_obstacle_inflation_dist: 0.35
 
   #目标点误差允许值
   xy_goal_tolerance: 0.2  #机器人到达目标点时附近时的弧度偏差允许量，在该偏差内认为已经到达目标点，单位为：m
-  yaw_goal_tolerance: 0.1 #机器人到达目标点时附近时的弧度偏差允许量，在该偏差内认为已经到达目标点单位为：rad
+  yaw_goal_tolerance: 0.15 #机器人到达目标点时附近时的弧度偏差允许量，在该偏差内认为已经到达目标点单位为：rad
   free_goal_vel: False    #允许机器人以最大速度驶向目的地
 
   #轨道配置参数
@@ -92,7 +92,7 @@ TebLocalPlannerROS:
   weight_adapt_factor: 2
 
   #不同拓扑中的并行规划
-  enable_homotopy_class_planning: False
+  enable_homotopy_class_planning: True
   enable_multithreading: True
   max_number_classes: 4
   selection_cost_hysteresis: 1.0
