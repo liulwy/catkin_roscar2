@@ -17,7 +17,6 @@ import tty
 import time
 import threading
 import rospy
-import yaml
 from geometry_msgs.msg import Twist
 from nav_msgs.msg import Odometry
 from tf.transformations import euler_from_quaternion
@@ -49,10 +48,14 @@ def odom_callback(msg):
     """后台订阅 /odom，始终缓存最新位姿；自动录制时按距离采样"""
     global recording, recorded_waypoints, last_sample_pose, latest_pose
 
-    x = msg.pose.pose.position.x
-    y = msg.pose.pose.position.y
-    q = msg.pose.pose.orientation
-    _, _, yaw = euler_from_quaternion([q.x, q.y, q.z, q.w])
+    try:
+        x = msg.pose.pose.position.x
+        y = msg.pose.pose.position.y
+        q = msg.pose.pose.orientation
+        _, _, yaw = euler_from_quaternion([q.x, q.y, q.z, q.w])
+    except Exception as e:
+        rospy.logerr("[odom_callback] 解析里程计数据异常: %s", e)
+        return
 
     with pose_lock:
         latest_pose = (x, y, yaw)
@@ -69,8 +72,7 @@ def odom_callback(msg):
 
         recorded_waypoints.append({'x': round(x, 4), 'y': round(y, 4), 'yaw': round(yaw, 4)})
         last_sample_pose = (x, y, yaw)
-        rospy.loginfo("[录制] 采样点 #%d: (%.3f, %.3f, %.3f)",
-                      len(recorded_waypoints), x, y, yaw)
+        _print("[录制] #%d  (%.3f, %.3f, %.3f)" % (len(recorded_waypoints), x, y, yaw))
 
 
 def get_key(timeout=0.05):
@@ -79,6 +81,12 @@ def get_key(timeout=0.05):
     if rlist:
         return sys.stdin.read(1)
     return ''
+
+
+def _print(msg):
+    """raw 模式下安全打印：\r\n 确保回车+换行，flush 确保立即输出"""
+    sys.stdout.write(msg + "\r\n")
+    sys.stdout.flush()
 
 
 if __name__ == "__main__":
@@ -102,9 +110,9 @@ if __name__ == "__main__":
 
     twist = Twist()
 
-    rospy.loginfo(HELP_TEXT)
-    rospy.loginfo("线性速度: %.2f m/s | 角速度: %.2f rad/s | 录制间距: %.1fm | 保存路径: %s",
-                  linear, angular, sample_distance, save_dir)
+    print(HELP_TEXT)
+    _print("线性速度: %.2f m/s | 角速度: %.2f rad/s | 录制间距: %.1fm | 保存路径: %s" %
+          (linear, angular, sample_distance, save_dir))
 
     # ----- 终端 raw 模式 -----
     fd = sys.stdin.fileno()
@@ -129,19 +137,19 @@ if __name__ == "__main__":
             # --- 调速键 ---
             elif key == "1":
                 linear = max(0.0, linear - linear_step)
-                rospy.loginfo("线速度: %.2f m/s", linear)
+                _print("线速度: %.2f m/s" % linear)
                 continue
             elif key == "2":
                 linear = linear + linear_step
-                rospy.loginfo("线速度: %.2f m/s", linear)
+                _print("线速度: %.2f m/s" % linear)
                 continue
             elif key == "3":
                 angular = max(0.0, angular - angular_step)
-                rospy.loginfo("角速度: %.2f rad/s", angular)
+                _print("角速度: %.2f rad/s" % angular)
                 continue
             elif key == "4":
                 angular = angular + angular_step
-                rospy.loginfo("角速度: %.2f rad/s", angular)
+                _print("角速度: %.2f rad/s" % angular)
                 continue
             # --- 录制键 ---
             elif key == "r":
@@ -149,9 +157,9 @@ if __name__ == "__main__":
                     recording = not recording
                     if recording:
                         last_sample_pose = None
-                        rospy.loginfo(">>> 开始录制路径（采样间距=%.1fm）", sample_distance)
+                        _print("\n>>> 开始录制路径（采样间距=%.1fm）" % sample_distance)
                     else:
-                        rospy.loginfo(">>> 暂停录制（已录制 %d 个点）", len(recorded_waypoints))
+                        _print(">>> 暂停录制（已录制 %d 个点）\n" % len(recorded_waypoints))
                 continue
             elif key == "j":
                 with pose_lock, odom_lock:
@@ -161,28 +169,30 @@ if __name__ == "__main__":
                         x, y, yaw = latest_pose
                         recorded_waypoints.append({'x': round(x, 4), 'y': round(y, 4), 'yaw': round(yaw, 4)})
                         idx = len(recorded_waypoints)
-                        rospy.loginfo(
-                            "\n=========================================\n"
-                            "  [手动打点] 路径点 #%d:\n"
-                            "    x=%.3f  y=%.3f  yaw=%.3f\n"
-                            "=========================================\n",
-                            idx, x, y, yaw)
+                        _print("=" * 45)
+                        _print("  [手动打点] 路径点 #%d" % idx)
+                        _print("    x=%.4f   y=%.4f   yaw=%.4f" % (x, y, yaw))
+                        _print("=" * 45)
                 continue
             elif key == "p":
                 with odom_lock:
                     if not recorded_waypoints:
-                        rospy.logwarn("没有录制点，请先按 r 或 j 添加点位")
+                        _print("[警告] 没有录制点，请先按 r 或 j 添加点位")
                     else:
-                        filename = "patrol_path.yaml"
+                        # 按时间戳命名，不覆盖旧文件
+                        filename = "patrol_path_%s.yaml" % time.strftime("%m_%d_%H_%M")
                         filepath = os.path.join(save_dir, filename)
-                        data = {
-                            'path_name': 'recorded_path',
-                            'waypoints': recorded_waypoints,
-                        }
                         with open(filepath, 'w') as f:
-                            yaml.dump(data, f, default_flow_style=False, allow_unicode=True)
-                        rospy.loginfo(">>> 路径已保存: %s（共 %d 个点）",
-                                      filepath, len(recorded_waypoints))
+                            f.write("# 路径名称\n")
+                            f.write('path_name: "recorded_path"\n')
+                            f.write("\n")
+                            f.write("# 路径点列表 — 由键盘遥控录制\n")
+                            f.write("waypoints:\n")
+                            for i, wp in enumerate(recorded_waypoints):
+                                f.write("  # 点位 %d\n" % (i + 1))
+                                f.write("  - {x: %.4f, y: %.4f, yaw: %.4f}\n" %
+                                        (wp['x'], wp['y'], wp['yaw']))
+                        _print(">>> 路径已保存: %s（共 %d 个点）" % (filepath, len(recorded_waypoints)))
                         recording = False
                 continue
             elif key == "c":
@@ -190,11 +200,11 @@ if __name__ == "__main__":
                     recording = False
                     recorded_waypoints = []
                     last_sample_pose = None
-                    rospy.loginfo(">>> 录制已清除")
+                    _print(">>> 录制已清除")
                 continue
             # --- 退出键 ---
             elif key == "q":
-                rospy.loginfo("退出键盘遥控")
+                _print("退出键盘遥控")
                 break
 
             # --- 松键检测：超过 HOLD_TIMEOUT 没收到驱动键，全部清零 ---
@@ -216,6 +226,8 @@ if __name__ == "__main__":
                 twist.angular.z -= angular
 
             pub.publish(twist)
+            # 出让 GIL 给 subscriber 回调线程，防止 CPU 高负载时回调被饿死
+            rospy.sleep(0.001)
 
     finally:
         # 恢复终端 + 停车

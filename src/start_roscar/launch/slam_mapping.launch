@@ -15,8 +15,8 @@
   <!-- 2. 地图服务器（发布预建地图到 /map） -->
   <node pkg="map_server" type="map_server" name="map_server_roscar" args="$(find start_roscar)/map/roscar_map.yaml" output="screen"/>
 
-  <!-- 3. AMCL 定位（激光匹配地图，发布 map→odom TF） -->
-  <include file="$(find start_roscar)/launch/include/amcl.launch" />
+  <!-- 3. AMCL 定位（激光匹配地图，发布 map→odom TF）
+  <include file="$(find start_roscar)/launch/include/amcl.launch" /> -->
 
   <!-- 4. 键盘遥控 + 路径录制 -->
   <node pkg="start_roscar"
