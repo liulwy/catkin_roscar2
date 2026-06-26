@@ -1,15 +1,26 @@
 <launch>
-  <!-- 底盘驱动 -->
+  <!-- ============================================================ -->
+  <!--  纯键盘遥控 Launch 文件                                        -->
+  <!--  仅启动底盘驱动 + 键盘遥控，不含 SLAM / 导航 / 传感器            -->
+  <!--                                                              -->
+  <!--  操作说明：                                                     -->
+  <!--    WASD 开车，q 退出                                           -->
+  <!--    r=录制路径  p=保存路径  c=清除录制                            -->
+  <!--    1/2=减/增线速度  3/4=减/增角速度                              -->
+  <!-- ============================================================ -->
+
+  <!-- 1. 底盘驱动（STM32 串口通信，发布 /odom /imu /PowerVoltage） -->
   <include file="$(find driver)/launch/car_driver.launch" />
 
-  <!-- 键盘控制 -->
+  <!-- 2. 键盘遥控节点 -->
   <node pkg="start_roscar"
         type="keyboard_teleop.py"
         name="keyboard_teleop"
-      output="screen">
-    <param name="linear" value="0.20" />
-    <param name="angular" value="0.80" />
-    <param name="linear_step" value="0.02" />
-    <param name="angular_step" value="0.05" />
+        output="screen">
+    <!-- 驾驶参数 -->
+    <param name="linear" value="0.20" />        <!-- 默认线速度，单位：m/s -->
+    <param name="angular" value="0.80" />       <!-- 默认角速度，单位：rad/s -->
+    <param name="linear_step" value="0.02" />   <!-- 调速步长（线速度），单位：m/s -->
+    <param name="angular_step" value="0.05" />  <!-- 调速步长（角速度），单位：rad/s -->
   </node>
 </launch>

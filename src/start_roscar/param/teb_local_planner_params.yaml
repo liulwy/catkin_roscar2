@@ -68,55 +68,66 @@ TebLocalPlannerROS:
   max_global_plan_lookahead_dist: 3.0 #考虑优化的全局计划子集的最大长度
   feasibility_check_no_poses: 5 #检测位姿可到达的时间间隔 minimum 0
 
-  #轨迹优化参数
-  no_inner_iterations: 5
-  no_outer_iterations: 4
-  optimization_activate: True
-  optimization_verbose: False
-  penalty_epsilon: 0.1
-  obstacle_cost_exponent: 4
-  weight_max_vel_x: 2
-  weight_max_vel_theta: 1
-  weight_acc_lim_x: 1
-  weight_acc_lim_theta: 1
-  weight_kinematics_nh: 1000
-  weight_kinematics_forward_drive: 1
-  weight_kinematics_turning_radius: 1
-  weight_optimaltime: 1 #必须大于0
-  weight_shortest_path: 0
-  weight_obstacle: 100
-  weight_inflation: 0.2
-  weight_dynamic_obstacle: 10 
-  weight_dynamic_obstacle_inflation: 0.2
-  weight_viapoint: 1
-  weight_adapt_factor: 2
+  # ===== 轨迹优化参数 =====
+  # G2O 图优化求解器迭代次数
+  no_inner_iterations: 5       # 内层迭代次数（每次求解器调用内的迭代）
+  no_outer_iterations: 4       # 外层迭代次数（重新初始化轨迹的轮数）
+  optimization_activate: True   # 是否启用轨迹优化
+  optimization_verbose: False   # 是否输出优化过程的详细日志
+  penalty_epsilon: 0.1          # 惩罚项的小量偏移，避免除数过零
+  obstacle_cost_exponent: 4     # 障碍物代价的指数系数，越大越远离障碍物
 
-  #不同拓扑中的并行规划
-  enable_homotopy_class_planning: False
-  enable_multithreading: True
-  max_number_classes: 4
-  selection_cost_hysteresis: 1.0
-  selection_prefer_initial_plan: 0.95
-  selection_obst_cost_scale: 1.0
-  selection_alternative_time_cost: False
-  roadmap_graph_no_samples: 15
-  roadmap_graph_area_width: 5
-  roadmap_graph_area_length_scale: 1.0
-  h_signature_prescaler: 0.5
-  h_signature_threshold: 0.1
-  obstacle_heading_threshold: 0.45
-  switching_blocking_period: 0.0
-  viapoints_all_candidates: True
-  delete_detours_backwards: True
-  max_ratio_detours_duration_best_duration: 3.0
-  visualize_hc_graph: False
-  visualize_with_time_as_z_axis_scale: False
+  # --- 速度与加速度约束权重 ---
+  weight_max_vel_x: 2           # 最大x向线速度约束权重
+  weight_max_vel_theta: 1       # 最大角速度约束权重
+  weight_acc_lim_x: 1           # x向加速度限制约束权重
+  weight_acc_lim_theta: 1       # 角加速度限制约束权重
 
-  #恢复行为
-  shrink_horizon_backup: True
-  shrink_horizon_min_duration: 10
-  oscillation_recovery: False
-  oscillation_v_eps: 0.1
-  oscillation_omega_eps: 0.1
-  oscillation_recovery_min_duration: 10
-  oscillation_filter_duration: 10
+  # --- 运动学约束权重 ---
+  # 【关键】weight_kinematics_nh 是非完整约束权重。全向轮小车应设较小值(1)，
+  # 阿克曼小车需设较大值(1000)，否则 TEB 会为了避障违反阿克曼约束。
+  weight_kinematics_nh: 1000         # 非完整运动学约束权重（全向轮→1，阿克曼→1000）
+  weight_kinematics_forward_drive: 1 # 前向驱动偏好权重（全向轮→0）
+  weight_kinematics_turning_radius: 1 # 最小转弯半径约束权重（全向轮→0）
+
+  # --- 路径质量权重 ---
+  weight_optimaltime: 1        # 最优时间权重，必须大于0，越大越追求快速到达
+  weight_shortest_path: 0      # 最短路径权重，与 optimaltime 互斥，一般设为0
+  weight_obstacle: 100         # 障碍物避让权重，越大离障碍物越远
+  weight_inflation: 0.2        # 膨胀层代价权重
+  weight_dynamic_obstacle: 10  # 动态障碍物避让权重
+  weight_dynamic_obstacle_inflation: 0.2  # 动态障碍物膨胀代价权重
+  weight_viapoint: 1           # 途经点约束权重（用于 homotopy class planning）
+  weight_adapt_factor: 2       # 自适应权重因子，迭代中动态调整权重时的缩放系数
+
+  # ===== 同伦类并行规划（Homotopy Class Planning）=====
+  # 启用后 TEB 会在不同拓扑路径中并行搜索，适合多障碍物复杂环境，
+  # 但计算开销较大，简单环境建议关闭。
+  enable_homotopy_class_planning: False  # 是否启用同伦类规划
+  enable_multithreading: True            # 是否启用多线程并行优化不同拓扑的轨迹
+  max_number_classes: 4                  # 最多保留多少个不同的同伦类
+  selection_cost_hysteresis: 1.0         # 选择最优轨迹时的代价迟滞阈值
+  selection_prefer_initial_plan: 0.95    # 偏好初始已选轨迹的权重（避免频繁切换）
+  selection_obst_cost_scale: 1.0         # 选择时障碍物代价的缩放系数
+  selection_alternative_time_cost: False # 是否在选择时考虑备选轨迹的时间代价
+  roadmap_graph_no_samples: 15           # 路标图采样点数
+  roadmap_graph_area_width: 5            # 路标图区域宽度，单位：m
+  roadmap_graph_area_length_scale: 1.0   # 路标图区域长度缩放系数
+  h_signature_prescaler: 0.5             # H-signature 预缩放系数
+  h_signature_threshold: 0.1             # H-signature 区分阈值
+  obstacle_heading_threshold: 0.45       # 障碍物朝向变化阈值
+  switching_blocking_period: 0.0         # 切换轨迹后的阻塞时间，防止频繁切换
+  viapoints_all_candidates: True         # 是否所有候选轨迹都使用途径点
+  delete_detours_backwards: True         # 是否删除往反方向绕路的候选轨迹
+  max_ratio_detours_duration_best_duration: 3.0  # 绕路轨迹时长与最优时长的最大比值
+  visualize_hc_graph: False              # 是否在 RViz 中可视化同伦类图
+  visualize_with_time_as_z_axis_scale: False  # 是否将时间轴映射为Z轴进行可视化
+
+  # ===== 恢复行为 =====
+  shrink_horizon_backup: True            # 是否在规划失败后收缩优化时域重试
+  shrink_horizon_min_duration: 10        # 收缩后的最小时域长度
+  oscillation_recovery: False            # 是否启用振荡检测与恢复
+  oscillation_v_eps: 0.1                 # 振荡判定：线速度变化小于此值视为振荡，单位：m/s
+  oscillation_omega_eps: 0.1             # 振荡判定：角速度变化小于此值视为振荡，单位：rad/s
+  oscillation_recovery_min_duration: 10  # 振荡恢复最小持续时间
+  oscillation_filter_duration: 10        # 振荡检测滤波窗口长度
