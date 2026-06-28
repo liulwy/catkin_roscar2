@@ -1,29 +1,83 @@
 <launch>
-  <!-- =============================== -->
-  <!-- 毫米波雷达 ARS408 避障全套管线  -->
-  <!-- =============================== -->
+  <!--
+    ================================================================
+    毫米波雷达 ARS408 避障全套管线
 
-  <!-- Step 1: CAN 初始化 -->
+    整合步骤（共 5 步）：
+      1. can_init          —— 加载 CAN 内核模块并拉起 can0 接口
+      2. socketcan_bridge  —— CAN 帧 ↔ ROS 话题桥接
+      3. ars408_node       —— 解析雷达目标（↔ /radar/pointcloud）
+      4. radar_broadcaster —— base_link → radar_link 静态 TF
+      5. radar_only_obstacle —— 障碍物检测（↔ /person_radar/obstacles）
+
+    数据流：
+      [CAN 硬件] → socketcan_bridge → /received_messages
+        → ars408_node → /radar/pointcloud
+          → radar_only_obstacle → /person_radar/obstacles (Float32MultiArray)
+
+    使用方式（在 multi_navigation.launch 中通过 use_radar:=true 开启）：
+      roslaunch start_roscar multi_navigation.launch use_radar:=true
+
+      ROS 参数覆盖示例：
+      <param name="target_distance" value="2.0"/>   <!-- 重点关注距离 -->
+
+    注意：
+      - 不使用 tf_publisher.py（它会重复发布 camera_link 引起 TF 冲突，
+        因为 camera_link 已在 robot_model_visualization.launch 中定义）
+      - 使用 ROS 自带的 static_transform_publisher 仅发布 radar_link
+      - 需要 sudo 权限初始化 CAN，因此用 launch-prefix 配合管道
+    ================================================================
+  -->
+
+  <!-- Step 1: CAN 接口初始化
+       顺序加载：can → can_raw → mttcan（M_CAN 驱动）
+       → ip link set up bitrate 500k
+       注意：密码 123456 写死在命令中（仅用于开发环境） -->
   <node name="can_init" pkg="start_roscar" type="multi_waypoint_nav.py"
-        launch-prefix="bash -c 'echo 123456 | sudo -S modprobe can; echo 123456 | sudo -S modprobe can_raw; echo 123456 | sudo -S modprobe mttcan; echo 123456 | sudo -S ip link set can0 up type can bitrate 500000; sleep 1'"
+        launch-prefix="bash -c '
+          echo 123456 | sudo -S modprobe can;
+          echo 123456 | sudo -S modprobe can_raw;
+          echo 123456 | sudo -S modprobe mttcan;
+          echo 123456 | sudo -S ip link set can0 up type can bitrate 500000;
+          sleep 1'"
         output="screen"/>
 
-  <!-- Step 2: SocketCAN 桥接（CAN 消息 ↔ ROS topic /received_messages） -->
-  <node pkg="socketcan_bridge" type="socketcan_bridge_node" name="socketcan_bridge" output="screen">
+  <!-- Step 2: SocketCAN 桥接
+       CAN 硬件消息 → ROS 话题 /received_messages (can_msgs/Frame)
+       驱动：socketcan_bridge 包 -->
+  <node pkg="socketcan_bridge" type="socketcan_bridge_node"
+        name="socketcan_bridge" output="screen">
     <param name="can_device" value="can0"/>
   </node>
 
-  <!-- Step 3: ARS408 雷达驱动（/received_messages → /radar/pointcloud） -->
-  <node pkg="ars408_ros" type="ars408_node.py" name="ars408_node" output="screen"/>
+  <!-- Step 3: ARS408 雷达驱动
+       将 /received_messages 解析为雷达目标
+       发布 /radar/pointcloud（PointCloud2，带时间戳） -->
+  <node pkg="ars408_ros" type="ars408_node.py"
+        name="ars408_node" output="screen"/>
 
-  <!-- Step 4: base_link → radar_link 静态 TF -->
-  <!-- 注意：不用 tf_publisher.py（它会重复发布 camera_link 造成 TF 冲突） -->
+  <!-- Step 4: base_link → radar_link 静态 TF
+       雷达安装位置：车前方 0.10m，抬高 0.30m
+       频率参数 100 = 每 100ms 发布一次（仅对非静态变换生效，静态 TF 只需一次）
+       注意：此处不用 tf_publisher.py，避免重复发布 camera_link -->
   <node pkg="tf" type="static_transform_publisher" name="radar_broadcaster"
         args="0.10 0 0.30 0 0 0 base_link radar_link 100"/>
 
-  <!-- Step 5: 雷达障碍物检测（/radar/pointcloud → /person_radar/obstacles） -->
-  <node name="radar_only_obstacle" pkg="radar_obstacle" type="radar_only_obstacle.py" output="screen">
-    <param name="radar_topic" value="/radar/pointcloud"/>
+  <!-- Step 5: 雷达障碍物检测
+       输入：/radar/pointcloud  → 输出：/person_radar/obstacles
+       参数见下方详解：
+         target_distance    = 2.0    — 检测目标距离 (m)
+         distance_tolerance = 1.5    — 距离容差 (m)
+         max_angle_deg      = 45.0   — 最大水平视角（度），超出忽略
+         rcs_min            = -5.0   — 最小 RCS（dB），低于此值视为噪声
+         persistence_frames = 8      — 目标持续出现帧数才确认为障碍物
+         persistence_window = 10     — 滑窗大小（用于持久化统计）
+         cluster_radius     = 0.3    — 聚类半径 (m)，同一障碍物合并
+         clear_timeout      = 99999.0 — 清除超时（极大值 ≈ 不自动清除）
+         clear_cooldown     = 1.0    — 清除冷却时间 (s) -->
+  <node name="radar_only_obstacle" pkg="radar_obstacle"
+        type="radar_only_obstacle.py" output="screen">
+    <param name="radar_topic"       value="/radar/pointcloud"/>
     <param name="target_distance"      value="2.0"/>
     <param name="distance_tolerance"   value="1.5"/>
     <param name="max_angle_deg"        value="45.0"/>

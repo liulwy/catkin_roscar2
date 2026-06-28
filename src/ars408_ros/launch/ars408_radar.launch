@@ -1,7 +1,37 @@
 <launch>
+  <!--
+    ARS408 毫米波雷达独立启动文件
+
+    使用方式：
+      roslaunch ars408_ros ars408_radar.launch can_device:=can0
+
+    依赖：
+      - socketcan_bridge 包：将 Linux CAN 套接字桥接到 ROS 话题
+      - ars408_node.py：解析 CAN 消息为雷达目标
+
+    数据流：
+      [CAN 硬件] → [socketcan_bridge_node] → /received_messages (can_msgs/Frame)
+        → [ars408_node] → /radar/targets     (MarkerArray)
+                         → /radar/raw         (Float32MultiArray)
+                         → /radar/pointcloud  (PointCloud2)
+
+    注意：
+      - 这是纯雷达驱动启动文件，不含避障逻辑。
+        完整的避障管线请用 start_roscar 包中的 radar_obstacle.launch。
+      - 必须先初始化 CAN 接口（sudo ip link set can0 up type can bitrate 500000）
+        推荐在 radar_obstacle.launch 中用 launch-prefix 自动初始化。
+  -->
+
+  <!-- CAN 设备名参数，可按需覆盖 -->
   <arg name="can_device" default="can0" />
-  <node pkg="socketcan_bridge" type="socketcan_bridge_node" name="socketcan_bridge" output="screen">
+
+  <!-- Step 1: SocketCAN ↔ ROS 桥接 -->
+  <node pkg="socketcan_bridge" type="socketcan_bridge_node"
+        name="socketcan_bridge" output="screen">
     <param name="can_device" value="$(arg can_device)" />
   </node>
-  <node pkg="ars408_ros" type="ars408_node.py" name="ars408_node" output="screen" />
+
+  <!-- Step 2: ARS408 雷达解析节点 -->
+  <node pkg="ars408_ros" type="ars408_node.py"
+        name="ars408_node" output="screen" />
 </launch>

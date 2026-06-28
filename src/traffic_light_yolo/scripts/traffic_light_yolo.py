@@ -159,7 +159,7 @@ class TrafficLightDetector:
         else:
             distance = float('inf')
 
-        rospy.loginfo("检测到 %s 灯, 目标像素: u=%d, 相机角度: %.2f°, 雷达角度: %.2f°, 雷达距离(最小): %.3fm",
+        rospy.loginfo_throttle(0.5, "检测到 %s 灯, 目标像素: u=%d, 相机角度: %.2f°, 雷达角度: %.2f°, 雷达距离(最小): %.3fm",
                       label, u, np.degrees(theta_rad), np.degrees(theta_lidar), distance)
         return distance
 
