@@ -31,6 +31,7 @@
 	<arg name="pixel_format" default="yuyv" />
 	<arg name="model_path" default="best.pt" />
 	<arg name="show_image" default="false" />
+	<arg name="dump_full_scan" default="false" doc="输出全部雷达原始 [角度, 距离] 数据到 lidar_ranges.txt，用于标定" />
 
 	<!-- USB 摄像头 -->
 	<node name="usb_cam" pkg="usb_cam" type="usb_cam_node" output="screen">
@@ -50,6 +51,7 @@
 				output="screen">
 		<env name="LD_PRELOAD" value="/usr/lib/aarch64-linux-gnu/libgomp.so.1" />
 		<param name="model_path" value="$(find traffic_light_yolo)/models/best.pt" />
+		<param name="dump_full_scan" value="$(arg dump_full_scan)" />
 	</node>
 
 	<!-- 可选：查看原始相机画面 -->

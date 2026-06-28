@@ -83,6 +83,13 @@ class TrafficLightDetector:
         self.lidar_angle_max = 0.0
         self.scan_sub = rospy.Subscriber('/scan', LaserScan, self.lidar_callback)
 
+        # [标定] 是否输出全部雷达原始 [角度, 距离] 数据到 lidar_ranges.txt
+        # 用法: roslaunch 时加 dump_full_scan:=true，标定完关闭
+        self.dump_full_scan = rospy.get_param('~dump_full_scan', False)
+        self.scan_count = 0  # 雷达帧计数，用于控制写入频率
+        if self.dump_full_scan:
+            rospy.logwarn("[标定模式] 雷达全部原始数据将写入 lidar_ranges.txt")
+
         # 雷达相对相机的安装偏移角（弧度）
         # 根据实测数据：相机角度-4.91°对应雷达177.9°，故偏移=182.81°=3.1906rad
         # 可通过ROS参数 ~lidar_offset_angle 覆盖
@@ -99,6 +106,19 @@ class TrafficLightDetector:
         self.lidar_angle_increment = msg.angle_increment
         self.lidar_angle_max = msg.angle_max
         self.lidar_ranges = list(msg.ranges)
+
+        # [标定] 输出全部雷达原始 [角度(度), 距离(米)] 数据
+        if self.dump_full_scan:
+            self.scan_count += 1
+            n = len(msg.ranges)
+            self.lidar_file.write("=== scan %d ===\n" % self.scan_count)
+            self.lidar_file.write("# angle_min=%.4f  angle_max=%.4f  angle_increment=%.4f  n=%d\n" % (
+                msg.angle_min, msg.angle_max, msg.angle_increment, n))
+            for i in range(n):
+                angle = msg.angle_min + i * msg.angle_increment
+                self.lidar_file.write("%.4f, %.3f\n" % (angle, msg.ranges[i]))
+            self.lidar_file.write("\n")
+            self.lidar_file.flush()
 
     def calculate_distance(self, u, label=""):
         if not self.lidar_ranges or self.lidar_angle_increment == 0:
